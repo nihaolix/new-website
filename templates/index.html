@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>GT Design X - 订单与配置管理</title>
+    <style>
+        /* ================= GT Design X 核心色彩 ================= */
+        :root {
+            --gt-sidebar: #1e2638; --gt-sidebar-hover: #2b354d;
+            --gt-header: #1152c5; --gt-bg: #f0f2f5; --gt-card: #ffffff;
+            --gt-border: #e8e8e8; --gt-text-main: #333333; --gt-text-sub: #888888;
+            --gt-accent: #1152c5; --success: #00a854; --danger: #f04134; --warning: #fa8c16;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--gt-bg); color: var(--gt-text-main); display: flex; height: 100vh; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cfd8dc; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+
+        .sidebar { width: 240px; background: var(--gt-sidebar); color: #a3b1c6; display: flex; flex-direction: column; flex-shrink: 0; z-index: 20; }
+        .logo-area { height: 60px; display: flex; align-items: center; padding: 0 20px; background: #171d2b; color: white; font-size: 1.2rem; font-weight: bold; letter-spacing: 1px; }
+        .logo-icon { width: 28px; height: 28px; background: white; color: #171d2b; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px; font-style: italic; font-weight: 900; }
+
+        .nav-menu { padding: 10px 0; overflow-y: auto; flex: 1; }
+        .nav-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; transition: 0.2s; border-left: 3px solid transparent; }
+        .nav-item:hover { background: var(--gt-sidebar-hover); color: white; }
+        .nav-item.active { background: var(--gt-sidebar-hover); color: white; border-left-color: #4da1ff; font-weight: bold; }
+
+        .main-wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .topbar { height: 60px; background: var(--gt-header); color: white; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; flex-shrink: 0; }
+        .page-header { background: white; padding: 15px 24px; border-bottom: 1px solid var(--gt-border); font-size: 1.1rem; font-weight: bold; color: var(--gt-text-main); }
+        .content-area { padding: 24px; overflow-y: auto; flex: 1; position: relative; }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* ================= 数据卡片 ================= */
+        .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 24px; }
+        .stat-card { background: linear-gradient(135deg, #2a5298 0%, #1d61d2 100%); border-radius: 12px; padding: 30px 24px; border: none; box-shadow: 0 10px 20px rgba(17, 82, 197, 0.15); position: relative; overflow: hidden; color: #ffffff; transition: all 0.3s ease; }
+        .stat-card::after { content: ''; position: absolute; top: -50%; right: -10%; width: 150px; height: 150px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); border-radius: 50%; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(17, 82, 197, 0.25); }
+        .stat-title { color: rgba(255,255,255,0.85); font-size: 1rem; margin-bottom: 12px; font-weight: 500; letter-spacing: 0.5px; position: relative; z-index: 2;}
+        .stat-value { font-size: 2.8rem; font-weight: bold; color: #ffffff; line-height: 1; position: relative; z-index: 2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);}
+        .bg-icon { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); width: 64px; height: 64px; border-radius: 16px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #ffffff; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2); z-index: 1; }
+
+        .card-container { background: white; border: 1px solid var(--gt-border); border-radius: 6px; padding: 24px; margin-bottom: 24px; }
+        .section-title { font-size: 1rem; font-weight: bold; margin-bottom: 20px; padding-left: 10px; border-left: 4px solid var(--gt-accent); display: flex; justify-content: space-between; align-items: center;}
+
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--gt-border); }
+        th { background: #fafafa; color: var(--gt-text-sub); font-weight: normal; font-size: 0.9rem; }
+
+        input[type="text"], input[type="number"], input[type="password"], select { border: 1px solid #d9d9d9; border-radius: 4px; padding: 8px 12px; outline: none; transition: 0.2s; width: 100%; box-sizing: border-box; }
+        input:focus, select:focus { border-color: var(--gt-accent); box-shadow: 0 0 0 2px rgba(17, 82, 197, 0.1); }
+
+        .btn { padding: 8px 16px; border-radius: 4px; border: 1px solid transparent; cursor: pointer; font-size: 0.9rem; transition: 0.2s; white-space: nowrap; }
+        .btn-primary { background: var(--gt-accent); color: white; border-color: var(--gt-accent); }
+        .btn-primary:hover { background: #0d42a1; }
+        .btn-outline { background: white; border-color: var(--gt-border); color: var(--gt-text-main); }
+        .btn-outline:hover { color: var(--gt-accent); border-color: var(--gt-accent); }
+        .btn-danger { background: white; border-color: #ffccc7; color: var(--danger); }
+        .btn-danger:hover { background: #fff1f0; border-color: var(--danger); }
+        .btn-success { background: var(--success); color: white; border-color: var(--success); }
+        .btn-success:hover { background: #008f47; }
+        .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; display: inline-block; }
+        .badge-blue { background: #e6f1ff; color: #1152c5; border: 1px solid #b3d4ff; }
+        .badge-green { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+        .badge-red { background: #fff1f0; color: #f5222d; border: 1px solid #ffa39e; }
+        .badge-orange { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
+        .badge-purple { background: #f9f0ff; color: #722ed1; border: 1px solid #d3adf7; display: inline-block; } /* 新增待定基准色 */
+
+        /* ================= 订单卡片流 ================= */
+        .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .order-card { background: white; border: 1px solid var(--gt-border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; transition: 0.2s; }
+        .order-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #b3d4ff; transform: translateY(-2px); }
+        .order-card-header { padding: 16px; border-bottom: 1px solid var(--gt-border); font-weight: bold; display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
+        .order-badge-manuf { background: #e6f1ff; color: #1152c5; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; border: 1px solid #b3d4ff; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .order-card-body { padding: 16px; flex: 1; display: grid; gap: 10px; }
+        .order-row { display: flex; font-size: 0.9rem; align-items: center; }
+        .order-row .label { color: var(--gt-text-sub); width: 85px; flex-shrink: 0; }
+        .order-row .val { font-weight: 500; color: var(--gt-text-main); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .order-row .val.blue { color: var(--gt-accent); font-weight: bold; }
+        .order-actions { padding: 12px 16px; border-top: 1px solid var(--gt-border); display: flex; justify-content: flex-end; gap: 10px; background: white; flex-wrap: wrap; }
+
+        .pagination { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 15px; }
+        .page-info { font-size: 0.9rem; color: var(--gt-text-sub); }
+
+        /* 全局弹窗 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 8px; width: 700px; max-width: 90%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .modal-header { padding: 15px 24px; border-bottom: 1px solid var(--gt-border); display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.1rem; }
+        .modal-close { cursor: pointer; color: var(--gt-text-sub); font-size: 1.5rem; border: none; background: transparent; line-height: 1; }
+        .modal-close:hover { color: var(--danger); }
+        .modal-body { padding: 24px; overflow-y: auto; flex: 1; font-size: 0.95rem; line-height: 1.6;}
+
+        /* ================= 新增：智能联想输入框样式 ================= */
+        .autocomplete-wrapper { position: relative; width: 100%; }
+        .autocomplete-list {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: #fff; border: 1px solid var(--gt-border); border-top: none;
+            border-radius: 0 0 4px 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-height: 200px; overflow-y: auto; z-index: 100; display: none;
+        }
+        .autocomplete-item { padding: 8px 12px; cursor: pointer; color: var(--gt-text-main); font-size: 0.9rem; }
+        .autocomplete-item:hover { background-color: var(--gt-bg); color: var(--gt-accent); font-weight: bold; }
+        .autocomplete-item span { color: var(--gt-text-sub); font-size: 0.8rem; margin-left: 8px; }
+    </style>
+</head>
+<body>
+
+    <div id="loginModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#1e2638; z-index:9999; display:flex; align-items:center; justify-content:center;">
+        <div style="background:white; padding:40px; border-radius:8px; width:380px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+            <h2 style="margin-bottom:20px; text-align:center; color:var(--gt-accent);">机床数控配置平台</h2>
+            <input type="text" id="loginUser" placeholder="用户名 (例如: admin)" style="margin-bottom:15px; padding:10px;">
+            <input type="password" id="loginPwd" placeholder="密码 (例如: 123456)" style="margin-bottom:20px; padding:10px;" onkeydown="if(event.key==='Enter') doLogin()">
+            <button class="btn btn-primary" style="width:100%; padding:10px; font-size:1rem;" onclick="doLogin()">安全登录</button>
+            <div style="margin-top:20px; font-size:0.85rem; color:#666; background:#f8fafc; padding:12px; border-radius:4px; line-height: 1.5;">
+                <strong>测试预置账号库：</strong><br>
+                👑 <code>admin</code> / <code>123456</code> (超级管理员)<br>
+                👤 <code>wang</code> / <code>1</code> (标准管理员)<br>
+                👤 <code>chen</code> / <code>1</code> (研发工程师)<br>
+                👤 <code>li</code> / <code>1</code> (采购员)
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="logo-area"><div class="logo-icon">Gt</div> Design X</div>
+        <div class="nav-menu">
+            <div class="nav-item active" onclick="showPanel('dashboard', this)">首页概览</div>
+            <div class="nav-item" onclick="showPanel('orders', this)">数控系统订单</div>
+            <div class="nav-item admin-only" onclick="showPanel('templates', this)" style="display:none;">标准订单库</div>
+            <div class="nav-item" onclick="showPanel('library', this)">数控部件列表</div>
+            <div class="nav-item admin-only" onclick="showPanel('audit', this)" style="display:none;">审批工作流</div>
+            <div class="nav-item" onclick="showPanel('feedback', this)">系统Bug反馈</div>
+            <div class="nav-item super-admin-only" onclick="showPanel('users', this)" style="display:none;"> 用户权限配置</div>
+        </div>
+    </div>
+
+    <div class="main-wrapper">
+        <div class="topbar">
+            <div style="font-size: 1.1rem; display:flex; align-items:center;">≡ &nbsp;&nbsp; 机床研究院数控配置系统</div>
+            <div style="display:flex; align-items:center; gap:20px;">
+                <span id="currentUserSpan" style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size:0.9rem;">未登录</span>
+                <button class="btn btn-danger btn-sm" onclick="doLogout()">退出账号</button>
+            </div>
+        </div>
+
+        <div class="page-header" id="pageTitle">首页概览</div>
+
+        <div class="content-area">
+
+            <div id="dashboard" class="panel active">
+                <div class="stat-row">
+                    <div class="stat-card"><div class="stat-title">入库部件数量(个)</div><div class="stat-value" id="st-total">0</div><div class="bg-icon">📦</div></div>
+                    <div class="stat-card"><div class="stat-title">数控订单总数(个)</div><div class="stat-value" id="st-ord">0</div><div class="bg-icon">📄</div></div>
+                    <div class="stat-card"><div class="stat-title">标准订单库(个)</div><div class="stat-value" id="st-tpl">0</div><div class="bg-icon">📑</div></div>
+                    <div class="stat-card"><div class="stat-title">待审批订单(个)</div><div class="stat-value" id="st-pen">0</div><div class="bg-icon">⏳</div></div>
+                </div>
+                <div class="card-container">
+                    <div class="section-title"><span>标准订单基准库阅览</span></div>
+                    <table id="dashTplTable"><thead><tr><th>标准单名称</th><th>结构概览</th><th>操作</th></tr></thead><tbody></tbody></table>
+                    <div class="pagination">
+                        <button class="btn btn-outline btn-sm" id="btnPrev" onclick="prevPage()">上一页</button>
+                        <span class="page-info" id="pageInfo">第 1 / 1 页</span>
+                        <button class="btn btn-outline btn-sm" id="btnNext" onclick="nextPage()">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="orders" class="panel">
+                <div class="card-container eng-only" style="display:none;">
+                    <div class="section-title" style="color:var(--gt-accent);">创建新数控订单 & 自动基准匹配</div>
+                    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin-bottom:20px;">
+                        <div><label style="font-size:0.9rem;color:var(--gt-text-sub);">制造商</label><input type="text" id="oMan" placeholder="如: 西门子"></div>
+                        <div><label style="font-size:0.9rem;color:var(--gt-text-sub);">系统系列</label><input type="text" id="oSer" placeholder="如: <3>S系列"></div>
+                        <div><label style="font-size:0.9rem;color:var(--gt-text-sub);">适用机床</label><input type="text" id="oMac" placeholder="如: 五轴/镗铣"></div>
+                    </div>
+                    <div style="border-top: 1px dashed var(--gt-border); padding-top: 20px; margin-bottom:20px;">
+                        <div style="font-weight: bold; margin-bottom: 10px; color:var(--gt-text-main);">包含的部件明细录入</div>
+                        <table id="oCompTable">
+                            <thead><tr><th width="25%">部件分类</th><th>输入部件型号</th><th width="15%">操作</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <select class="o-c" onchange="this.closest('tr').querySelector('.o-m').setAttribute('list', 'dl-' + this.value); this.closest('tr').querySelector('.o-m').value='';">
+                                            <option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他" selected>其他</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" class="o-m" list="dl-其他" placeholder="双击下拉或输入关键词筛选型号" style="width:100%;"></td>
+                                    <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button class="btn btn-outline btn-sm" onclick="addOrderCompRow()">+ 增加一条部件明细</button>
+                    </div>
+                    <div style="text-align: center; margin-top: 10px;">
+                        <button class="btn btn-primary" onclick="submitOrder()">🤖 提交创建订单</button>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <div class="section-title" style="border:none; padding:0; margin-bottom:0; font-size:1.1rem;">数控订单状态列表</div>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="orderSearch" placeholder="搜索单号 / 制造商 / 适用机床..." style="width:260px; padding:6px 10px; border:1px solid #d9d9d9; border-radius:4px;" onkeydown="if(event.key==='Enter') loadOrders()">
+                        <button class="btn btn-primary btn-sm" onclick="loadOrders()">🔍 搜索</button>
+                        <button class="btn btn-outline btn-sm" onclick="document.getElementById('orderSearch').value=''; loadOrders();">重置</button>
+                    </div>
+                </div>
+                <div class="order-grid" id="orderGrid"></div>
+            </div>
+
+            <div id="templates" class="panel">
+                <div class="card-container">
+                    <div class="section-title">新增标准订单库模型</div>
+
+                    <div style="display:flex; gap:15px; margin-bottom:20px; align-items:center; width: 100%;">
+                        <input type="text" id="tNo" placeholder="请输入基准单号 (如 GT-STD-005)" style="flex: 1;">
+                        <input type="text" id="tName" placeholder="标准订单名称 (如 典型三轴机床配置单 v1.0)" style="flex: 1;">
+                        <input type="text" id="tErp" placeholder="ERP (申请后填写)" style="flex: 1;">
+                    </div>
+
+                    <div style="border-top: 1px dashed var(--gt-border); padding-top: 20px; margin-bottom:10px;">
+                        <div style="font-weight: bold; margin-bottom: 10px; color:var(--gt-text-main);">配置明细录入</div>
+                        <table id="tCompTable">
+                            <thead><tr><th width="25%">部件分类</th><th>选择已入库部件型号</th><th width="15%">操作</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <select class="t-c" onchange="this.closest('tr').querySelector('.t-m').value='';">
+                                            <option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他" selected>其他</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" class="t-m" placeholder="输入关键字自动联想现有型号 (支持模糊搜索)" style="width:100%;" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
+                                            <div class="autocomplete-list"></div>
+                                        </div>
+                                    </td>
+                                    <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="addTplCompRow()">+ 增加一条部件明细</button>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button id="saveTplBtn" class="btn btn-primary" onclick="saveTemplate()">✔️ 保存并加入标准订单库</button>
+                    </div>
+                </div>
+                <div class="card-container">
+                    <div class="section-title">现有标准订单库列表</div>
+                    <table id="tplTable"><thead><tr><th>基准单号</th><th>标准单名称</th><th>结构明细</th><th>操作</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+
+            <div id="library" class="panel">
+                <div class="card-container">
+                    <div class="section-title">全部数控部件数据</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:#f8fafc; padding:12px 15px; border-radius:6px; border:1px solid var(--gt-border);">
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <div style="font-weight:bold; color:var(--gt-text-sub); margin-right:5px;">🔍 快速检索:</div>
+                            <select id="searchCat" style="width:160px; padding:6px 10px;">
+                                <option value="全部">全部快速分类</option>
+                                <option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他">其他</option>
+                            </select>
+                            <input type="text" id="searchMod" placeholder="输入部件型号关键词..." style="width:350px; padding:6px 10px;">
+                            <button class="btn btn-primary btn-sm" style="width: 80px;" onclick="loadLib()">搜索</button>
+                            <button class="btn btn-outline btn-sm" style="width: 80px;" onclick="resetLibSearch()">重置</button>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-primary btn-sm admin-only" onclick="toggleAddPart()" style="display:none;">+ 手动新增部件</button>
+                            <input type="file" id="excelFile" style="display:none" accept=".xlsx, .xls" onchange="uploadExcel()">
+                            <button class="btn btn-success btn-sm admin-only" onclick="document.getElementById('excelFile').click()" style="display:none;">📤 批量导入 (Excel)</button>
+                        </div>
+                    </div>
+
+                    <div id="addPartBox" style="display:none; background:#fafafa; border:1px solid var(--gt-border); border-radius:6px; padding:15px; margin-bottom:20px; border-left:4px solid var(--success);">
+                        <div style="font-weight:bold; margin-bottom:10px;">快速提交入库申请</div>
+                        <div style="display:flex; gap:15px; align-items:center;">
+                            <select id="lCat" style="width:140px;">
+                                <option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他">其他</option>
+                            </select>
+                            <input type="text" id="lMod" placeholder="型号" style="width:160px;">
+                            <input type="text" id="lErp" placeholder="ERP(选填)" style="width:120px;">
+                            <input type="text" id="lRem" placeholder="备注说明(如具体用途)" style="flex:1;">
+                            <button class="btn btn-primary" onclick="submitApply()">提交</button>
+                            <button class="btn btn-outline" onclick="toggleAddPart()">取消</button>
+                        </div>
+                    </div>
+
+                    <table id="libTable">
+                        <thead><tr><th>部件型号</th><th>分类</th><th width="35%">备注说明</th><th>状态</th><th>操作</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="audit" class="panel">
+                <div class="card-container">
+                    <div class="section-title">待办资产审批</div>
+                    <table id="audTable"><thead><tr><th>申请部件</th><th>分类</th><th>操作</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+
+            <div id="users" class="panel">
+                <div class="card-container">
+                    <div class="section-title">配置员工系统角色</div>
+                    <table id="usersTable">
+                        <thead><tr><th>注册用户名</th><th>当前拥有角色</th><th>分配新角色</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="feedback" class="panel">
+                <div class="card-container">
+                    <div class="section-title">提交新问题 / 改进建议</div>
+                    <div style="display:flex; gap:15px; margin-bottom:15px;">
+                        <input type="text" id="fbTitle" placeholder="问题简述 (如：导出单据时格式错乱)" style="flex:1;">
+                    </div>
+                    <div style="margin-bottom:15px;">
+                        <textarea id="fbContent" placeholder="详细描述您遇到的问题、重现步骤或改进建议..." rows="4" style="width:100%; padding:12px; border:1px solid var(--gt-border); border-radius:4px; outline:none; resize:vertical; font-family:inherit;"></textarea>
+                    </div>
+                    <div style="text-align: right;">
+                        <button class="btn btn-primary" onclick="submitFeedback()">🚀 提交反馈</button>
+                    </div>
+                </div>
+
+                <div class="card-container" id="fbListContainer" style="display:none;">
+                    <div class="section-title" id="fbListTitle">🗂️ 全部用户反馈池 (超级管理员处理台)</div>
+                    <table id="fbTable">
+                        <thead><tr><th width="12%">提交人</th><th width="20%">问题简述</th><th>详细内容</th><th width="12%">状态</th><th width="15%">操作</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="globalModal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <span id="modalTitle">详情</span>
+                <button class="modal-close" onclick="closeModal(event)">×</button>
+            </div>
+            <div class="modal-body" id="modalBody" style="padding-bottom:10px;"></div>
+            <div id="modalFooter" style="padding:15px 24px; border-top:1px solid var(--gt-border); background:#fafafa; text-align:right;"></div>
+        </div>
+    </div>
+     <div id="customPromptModal" class="modal-overlay" style="z-index: 10001;">
+        <div class="modal-content" style="width: 450px; min-height: unset; height: auto;">
+            <div class="modal-header">
+                <span id="cpTitle">操作提示</span>
+                <button class="modal-close" onclick="closeCustomPrompt()">×</button>
+            </div>
+            <div class="modal-body" style="padding-bottom: 20px;">
+                <div id="cpMessage" style="margin-bottom: 12px; font-weight: bold; color: var(--gt-text-main);"></div>
+                <textarea id="cpInput" rows="4" style="width: 100%; padding: 12px; border: 1px solid var(--gt-border); border-radius: 6px; outline: none; resize: none; font-family: inherit; font-size: 0.95rem;"></textarea>
+            </div>
+            <div style="padding: 15px 24px; border-top: 1px solid var(--gt-border); background: #fafafa; text-align: right; border-radius: 0 0 8px 8px;">
+                <button class="btn btn-outline" onclick="closeCustomPrompt()" style="margin-right: 10px;">取消</button>
+                <button class="btn btn-primary" id="cpConfirmBtn">确认提交</button>
+            </div>
+        </div>
+    </div>
+    <div id="alertModal" class="modal-overlay" style="z-index: 10005;">
+        <div class="modal-content" style="width: 400px; min-height: unset; height: auto;">
+            <div class="modal-header">
+                <span style="color: var(--gt-accent);">⚠️ 系统提示</span>
+                <button class="modal-close" onclick="document.getElementById('alertModal').classList.remove('active')">×</button>
+            </div>
+            <div class="modal-body" style="padding-bottom: 20px; font-size: 1rem; color: var(--gt-text-main); font-weight: bold; text-align: center;">
+                <div id="alertMessage" style="margin-top: 10px;"></div>
+            </div>
+            <div style="padding: 12px 24px; border-top: 1px solid var(--gt-border); background: #fafafa; text-align: center; border-radius: 0 0 8px 8px;">
+                <button class="btn btn-primary" style="width: 120px;" onclick="document.getElementById('alertModal').classList.remove('active')">我知道了</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const CORE_CATS = ["电机"];
+        // 🔪 彻底覆写浏览器的原生 alert 函数
+        window.alert = function(msg) {
+            document.getElementById('alertMessage').innerText = msg;
+            document.getElementById('alertModal').classList.add('active');
+        };
+        let globalTplData = [], globalOrdersData = [];
+
+        // 保存真实登录用户的状态
+        let currentUser = null;
+        let currentRole = null;
+
+        function openModal(title, html, footerHtml = '') {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalBody').innerHTML = html;
+            const footer = document.getElementById('modalFooter');
+            if (footerHtml) { footer.innerHTML = footerHtml; footer.style.display = 'block'; } else { footer.style.display = 'none'; }
+            document.getElementById('globalModal').classList.add('active');
+        }
+        function closeModal(e) { if(e) e.preventDefault(); document.getElementById('globalModal').classList.remove('active'); }
+
+        // --- 登录体系 ---
+        async function doLogin() {
+            const u = document.getElementById('loginUser').value.trim();
+            const p = document.getElementById('loginPwd').value.trim();
+            if(!u || !p) return alert("请输入用户名和密码！");
+
+            try {
+                const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p}) });
+                const data = await res.json();
+
+                if(data.status === 'success') {
+                    currentUser = data.username;
+                    currentRole = data.role;
+                    document.getElementById('loginModal').style.display = 'none';
+                    applyUserRole();
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) { alert("网络异常，无法连接到服务器。"); }
+        }
+
+        function doLogout() {
+            currentUser = null; currentRole = null;
+            document.getElementById('loginUser').value = '';
+            document.getElementById('loginPwd').value = '';
+            document.getElementById('loginModal').style.display = 'flex';
+        }
+
+        // 根据角色分配可见权限
+        function applyUserRole() {
+            let roleIcon = '👤';
+            if(currentRole === '超级管理员') roleIcon = '👑';
+            else if(currentRole === '采购员') roleIcon = '📦';
+
+            document.getElementById('currentUserSpan').innerText = `${roleIcon} ${currentRole}：${currentUser}`;
+
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = (currentRole === '标准管理员' || currentRole === '超级管理员') ? 'flex' : 'none');
+            document.querySelectorAll('.super-admin-only').forEach(el => el.style.display = (currentRole === '超级管理员') ? 'flex' : 'none');
+            document.querySelectorAll('.eng-only').forEach(el => el.style.display = (currentRole === '研发工程师' || currentRole === '超级管理员') ? 'block' : 'none');
+
+            showPanel('dashboard', document.querySelectorAll('.nav-item')[0]);
+        }
+
+        function showPanel(id, el) {
+            document.querySelectorAll('.panel, .nav-item').forEach(x => x.classList.remove('active'));
+            document.getElementById(id).classList.add('active'); el.classList.add('active');
+            document.getElementById('pageTitle').innerText = el.innerText.replace(/[\n\r]+|[\s]{2,}/g, ' ').trim();
+
+            if(id === 'dashboard') { loadStats(); loadDashTpl(); }
+            if(id === 'orders') loadOrders();
+            if(id === 'templates') loadTemplatePage();
+            if(id === 'library') loadLib();
+            if(id === 'audit') loadAudit();
+            if(id === 'users') loadUsers();
+            if(id === 'feedback') loadFeedback(); // [新增]
+        }
+
+        // [新增修复] 获取统计数据时发送当前用户信息
+        async function loadStats() {
+            const url = `/api/stats?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}`;
+            const d = await(await fetch(url)).json();
+            document.getElementById('st-total').innerText = d.total;
+            document.getElementById('st-tpl').innerText = d.templates;
+            document.getElementById('st-ord').innerText = d.orders || 0;
+            document.getElementById('st-pen').innerText = d.pending;
+        }
+
+        let tplCurrentPage = 1;
+        const tplPageSize = 4;
+        async function loadDashTpl() {
+            const res = await fetch('/api/templates');
+            globalTplData = await res.json();
+            tplCurrentPage = 1;
+            renderDashTplPage();
+        }
+
+        function renderDashTplPage() {
+            const totalPages = Math.ceil(globalTplData.length / tplPageSize) || 1;
+            document.getElementById('pageInfo').innerText = `第 ${tplCurrentPage} / ${totalPages} 页`;
+            document.getElementById('btnPrev').disabled = tplCurrentPage === 1;
+            document.getElementById('btnNext').disabled = tplCurrentPage === totalPages;
+
+            const pageData = globalTplData.slice((tplCurrentPage - 1) * tplPageSize, tplCurrentPage * tplPageSize);
+            const tbody = document.querySelector('#dashTplTable tbody');
+            tbody.innerHTML = '';
+            pageData.forEach(t => {
+                let coreCount = 0, otherCount = 0;
+                Object.keys(t.data).forEach(k => {
+                    if(CORE_CATS.includes(k)) coreCount += (t.data[k] || []).length;
+                    else otherCount += (t.data[k] || []).length;
+                });
+                tbody.innerHTML += `<tr><td style="font-weight:bold; color:var(--gt-text-main);">${t.name}</td><td><span class="badge badge-blue">电机配置: ${coreCount} 项</span> <span class="badge badge-green">其他部件: ${otherCount} 项</span></td><td><a href="javascript:void(0)" onclick="showTplDetails(${t.id})" style="color:var(--gt-accent); text-decoration:none;">查看明细</a></td></tr>`;
+            });
+        }
+        function prevPage() { if(tplCurrentPage > 1) { tplCurrentPage--; renderDashTplPage(); } }
+        function nextPage() { if(tplCurrentPage < Math.ceil(globalTplData.length / tplPageSize)) { tplCurrentPage++; renderDashTplPage(); } }
+
+        function showTplDetails(id) {
+            const t = globalTplData.find(x => x.id === id);
+            if(!t) return;
+            let coreHtml = '', otherHtml = '', coreCount = 0, otherCount = 0;
+            Object.keys(t.data).forEach(cat => {
+                if(t.data[cat] && t.data[cat].length > 0) {
+                    if(CORE_CATS.includes(cat)) {
+                        coreHtml += t.data[cat].map(x => `<li style="margin-bottom:6px;"><span class="badge badge-blue" style="margin-right:8px; display:inline-block; width:120px; text-align:center;">${cat}</span>${x}</li>`).join('');
+                        coreCount += t.data[cat].length;
+                    } else {
+                        otherHtml += t.data[cat].map(x => `<li style="margin-bottom:6px;"><span class="badge badge-green" style="margin-right:8px; display:inline-block; width:120px; text-align:center;">${cat}</span>${x}</li>`).join('');
+                        otherCount += t.data[cat].length;
+                    }
+                }
+            });
+            let html = `
+                <div style="font-size:1.05rem; margin-bottom:15px;"><strong>【${t.name}】</strong> 结构明细：</div>
+                <div style="background:#f8fafc; padding:15px; border-radius:6px; border:1px solid var(--gt-border);">
+                    <div style="font-size:1.05rem; font-weight:bold; color:var(--gt-accent); margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                        📊 架构概览：电机数量：${t.motor_count || 0} &nbsp;&nbsp;|&nbsp;&nbsp; 📦 ERP 编号：<span style="color:#fa8c16;">${t.erp_code || '未分配'}</span>
+                    </div>
+                    <div style="font-weight:bold; color:var(--gt-text-main); margin-bottom:10px;">⚙️ 电机配置明细 (${coreCount}项)</div>
+                    <ul style="list-style:none; padding-left:10px; color:var(--gt-text-sub); margin-bottom:20px;">${coreHtml || '<li style="padding-left:135px;">暂无数据</li>'}</ul>
+                    <div style="font-weight:bold; color:#52c41a; margin-bottom:10px;">🔌 其他配置明细 (${otherCount}项)</div>
+                    <ul style="list-style:none; padding-left:10px; color:var(--gt-text-sub);">${otherHtml || '<li style="padding-left:135px;">暂无数据</li>'}</ul>
+                </div>
+            `;
+            openModal('标准库模型明细', html);
+        }
+
+        // --- 订单管理工作流 ---
+        function addOrderCompRow() {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td><select class="o-c" onchange="this.closest('tr').querySelector('.o-m').setAttribute('list', 'dl-' + this.value); this.closest('tr').querySelector('.o-m').value='';"><option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他" selected>其他</option></select></td><td><input type="text" class="o-m" list="dl-其他" placeholder="双击下拉或输入关键词筛选型号" style="width:100%;"></td><td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>`;
+            document.querySelector('#oCompTable tbody').appendChild(tr);
+        }
+
+        // [新增修复] 订单列表：隔离、搜索、删除
+        async function loadOrders() {
+    if (!document.getElementById('dl-container')) {
+        const comps = await(await fetch('/api/components?status=已发布')).json();
+        let dlContainer = document.createElement('div'); dlContainer.id = 'dl-container'; document.body.appendChild(dlContainer);
+        const cats = ["电机", "驱动", "系统", "操作部件", "电缆", "服务", "手册", "网络 / 连接配件", "电气安装辅件", "软件 / 功能授权", "其他"];
+        cats.forEach(cat => {
+            const dl = document.createElement('datalist'); dl.id = 'dl-' + cat;
+            comps.filter(c => c.category === cat).forEach(c => { dl.innerHTML += `<option value="${c.model}"></option>`; });
+            dlContainer.appendChild(dl);
+        });
+    }
+
+    const searchVal = document.getElementById('orderSearch').value.trim();
+    const url = `/api/orders?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}&search=${encodeURIComponent(searchVal)}`;
+
+    const orders = await(await fetch(url)).json();
+    globalOrdersData = orders;
+    const grid = document.getElementById('orderGrid'); grid.innerHTML = '';
+
+    if (orders.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:40px; color:var(--gt-text-sub); background:#fafafa; border:1px dashed #d9d9d9; border-radius:6px;">暂无可见的订单数据</div>`;
+        return;
+    }
+
+    orders.forEach(o => {
+        let matchText = o.matched_template;
+        if(o.match_score >= 0.1) matchText = `${o.matched_template} <span style="font-size:0.8rem; color:var(--gt-text-sub); margin-left:6px;">(${(o.match_score*100).toFixed(1)}%)</span>`;
+
+        // 状态视觉呈现
+        let badgeCls = 'badge-blue';
+        if(o.status === '待采购') badgeCls = 'badge-orange';
+        if(o.status === '已驳回') badgeCls = 'badge-red';
+        if(o.status === '已完成') badgeCls = 'badge-green';
+        if(o.status === '待定基准') badgeCls = 'badge-purple'; // [新增：待定基准使用紫色标签]
+
+        // 动作按钮生成(依赖用户当前角色)
+        let actionHtml = `<button class="btn btn-outline btn-sm" onclick="showOrderDetails(${o.id})">📄订单详情</button>`;
+
+        // [新增：处理待定基准状态] 只有超级管理员能操作
+        if (o.status === '待定基准' && currentRole === '超级管理员') {
+            actionHtml += `<button class="btn btn-success btn-sm" style="background:#722ed1; border-color:#722ed1;" onclick="doOrderWorkflow(${o.id}, 'set_baseline')">🎯 建立基准</button>`;
+            actionHtml += `<button class="btn btn-outline btn-sm" onclick="doOrderWorkflow(${o.id}, 'skip_baseline')">➡️ 特批流转</button>`;
+            actionHtml += `<button class="btn btn-danger btn-sm" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回</button>`;
+        }
+
+        if (o.status === '待审批' && (currentRole === '标准管理员' || currentRole === '超级管理员')) {
+            actionHtml += `<button class="btn btn-success btn-sm" onclick="doOrderWorkflow(${o.id}, 'approve')">✔️ 通过审批 </button>`;
+            actionHtml += `<button class="btn btn-danger btn-sm" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回订单</button>`;
+        }
+        if (o.status === '待采购' && (currentRole === '采购员' || currentRole === '超级管理员')) {
+            actionHtml += `<button class="btn btn-primary btn-sm" onclick="doOrderWorkflow(${o.id}, 'complete')">📦 采购已完成</button>`;
+        }
+
+        if (currentRole === '超级管理员') {
+            actionHtml += `<button class="btn btn-danger btn-sm" style="background:#fff1f0; color:#f5222d; border-color:#ffa39e;" onclick="deleteOrder(${o.id})">🗑️ 删除</button>`;
+        }
+
+        // 呈现驳回原因与通过备注
+        let msgHtml = '';
+        if(o.status === '已驳回' && o.reject_reason) {
+            msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border);"><div class="label" style="color:var(--danger);">驳回原因</div><div class="val" style="color:var(--danger); white-space:normal; font-size:0.85rem;">${o.reject_reason}</div></div>`;
+        } else if (o.status !== '待审批' && o.status !== '已驳回' && o.status !== '待定基准' && o.approve_remark) {
+            msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border);"><div class="label" style="color:var(--success);">审批备注</div><div class="val" style="color:var(--success); white-space:normal; font-size:0.85rem;">${o.approve_remark}</div></div>`;
+        }
+
+        grid.innerHTML += `
+            <div class="order-card">
+                <div class="order-card-header">
+                    <div style="font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+                        <span>${o.order_no}</span>
+                        <span class="badge ${badgeCls}">${o.status}</span>
+                    </div>
+                    <span class="order-badge-manuf" title="${o.manufacturer || '未知'}">${o.manufacturer || '未知'}</span>
+                </div>
+                <div class="order-card-body">
+                    <div class="order-row"><div class="label">建单人员</div><div class="val">${o.applicant || '-'}</div></div>
+                    <div class="order-row"><div class="label">适用机床</div><div class="val blue">${o.applicable_machine}</div></div>
+                    <div class="order-row"><div class="label">系统系列</div><div class="val">${o.series}</div></div>
+                    <div class="order-row"><div class="label">电机数量</div><div class="val">${o.motor_count}</div></div>
+                    <div class="order-row"><div class="label">基准匹配</div><div class="val blue" title="${o.matched_template}">${matchText}</div></div>
+                    ${msgHtml}
+                </div>
+                <div class="order-actions">${actionHtml}</div>
+            </div>`;
+    });
+}
+
+        // --- 核心升级：自定义 UI 弹窗工作流 ---
+        let currentWorkflowAction = null;
+        let currentWorkflowOrderId = null;
+
+        function closeCustomPrompt() {
+            document.getElementById('customPromptModal').classList.remove('active');
+        }
+
+        // 统一控制弹窗的展现 (消灭所有原生弹窗)
+        async function doOrderWorkflow(id, action) {
+            // 每次弹窗前，确保输入框是可见的
+            document.getElementById('cpInput').style.display = 'block';
+
+            if (action === 'reject') {
+                document.getElementById('cpTitle').innerHTML = '❌ 驳回订单';
+                document.getElementById('cpMessage').innerText = '请填写驳回给工程师的【具体原因】（必填）：';
+                document.getElementById('cpInput').value = '';
+                currentWorkflowAction = 'reject';
+                currentWorkflowOrderId = id;
+                document.getElementById('customPromptModal').classList.add('active');
+                document.getElementById('cpInput').focus();
+            }
+            else if (action === 'approve') {
+                document.getElementById('cpTitle').innerHTML = '✔️ 通过审批';
+                document.getElementById('cpMessage').innerText = '已核验无误，(可选) 填写交由采购的【通过备注】：';
+                document.getElementById('cpInput').value = '';
+                currentWorkflowAction = 'approve';
+                currentWorkflowOrderId = id;
+                document.getElementById('customPromptModal').classList.add('active');
+                document.getElementById('cpInput').focus();
+            }
+            else if (action === 'complete') {
+                // [修复点] 使用自定义弹窗代替原生的 confirm
+                document.getElementById('cpTitle').innerHTML = '📦 采购完结确认';
+                document.getElementById('cpMessage').innerText = '确认已完成所有采购入库核销流程？(此操作不可逆)';
+                document.getElementById('cpInput').style.display = 'none'; // 仅仅确认，不需要输入内容，把框藏起来
+                currentWorkflowAction = 'complete';
+                currentWorkflowOrderId = id;
+                document.getElementById('customPromptModal').classList.add('active');
+            }
+            else if (action === 'set_baseline') {
+                document.getElementById('cpTitle').innerHTML = '🎯 一键建基准并流转';
+                document.getElementById('cpMessage').innerText = '系统将以此订单明细自动生成新基准库，并流转给标准管理员。请填写交办备注：';
+                document.getElementById('cpInput').value = '';
+                currentWorkflowAction = 'set_baseline';
+                currentWorkflowOrderId = id;
+                document.getElementById('customPromptModal').classList.add('active');
+                document.getElementById('cpInput').focus();
+            }
+            else if (action === 'skip_baseline') {
+                document.getElementById('cpTitle').innerHTML = '➡️ 特批定制流转';
+                document.getElementById('cpMessage').innerText = '不建立基准，作为特批非标单直接流转给标准管理员。请填写特批备注：';
+                document.getElementById('cpInput').value = '';
+                currentWorkflowAction = 'skip_baseline';
+                currentWorkflowOrderId = id;
+                document.getElementById('customPromptModal').classList.add('active');
+                document.getElementById('cpInput').focus();
+            }
+        }
+
+        // 绑定自定义弹窗的“确认”按钮事件
+        document.getElementById('cpConfirmBtn').onclick = async function() {
+            const val = document.getElementById('cpInput').value.trim();
+            let payload = { id: currentWorkflowOrderId, action: currentWorkflowAction };
+
+            if (currentWorkflowAction === 'reject') {
+                if (val === '') return alert("操作失败：必须填写驳回原因！");
+                payload.reason = val;
+            } else if (currentWorkflowAction === 'approve') {
+                payload.remark = val;
+            }
+
+            // 关闭弹窗并发送请求
+            closeCustomPrompt();
+
+            // 为了防止按钮连击，可以在这里加个 loading 状态，目前直接 fetch
+            await fetch('/api/orders/workflow', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            loadOrders(); loadStats();
+        };
+
+        function showOrderDetails(id) {
+            const o = globalOrdersData.find(x => x.id === id);
+            if(!o) return;
+            let compHtml = '';
+            if(o.components && o.components.length > 0) {
+                compHtml = `<table style="margin-top:10px; margin-bottom:20px;"><thead><tr><th width="30%">部件分类</th><th>型号明细</th></tr></thead><tbody>` + o.components.map(c => `<tr><td><span class="badge ${CORE_CATS.includes(c.category)?'badge-blue':'badge-green'}">${c.category}</span></td><td style="font-weight:bold;">${c.model}</td></tr>`).join('') + `</tbody></table>`;
+            } else { compHtml = `<div style="color:var(--gt-text-sub); margin-top:10px; margin-bottom:20px; text-align:center; padding:15px; background:#fafafa; border-radius:4px;">暂无部件明细录入</div>`; }
+
+            let diffHtml = '';
+            if(o.match_score >= 0.1) {
+                diffHtml = `<div style="font-weight:bold; border-bottom:2px solid var(--gt-border); padding-bottom:8px; margin-bottom:10px; color:var(--gt-accent);">🎯 智能对比：与基准单【${o.matched_template}】差异分析</div><div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;"><div style="background:#f6ffed; border:1px solid #b7eb8f; padding:15px; border-radius:6px;"><strong style="color:var(--success);">[➕ 需在基准上新增配置]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${o.match_adds.length ? o.match_adds.join('<br>') : '无需增配，完全满足'}</div></div><div style="background:#fff1f0; border:1px solid #ffccc7; padding:15px; border-radius:6px;"><strong style="color:var(--danger);">[➖ 需从基准中剔除冗余]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${o.match_rms.length ? '<del>'+o.match_rms.join('</del><br><del>')+'</del>' : '无冗余部件'}</div></div></div>`;
+            } else { diffHtml = `<div style="margin-top:20px; padding:15px; background:#fff1f0; border:1px solid #ffccc7; border-radius:6px; color:var(--danger); font-weight:bold; text-align:center;">⚠️ 本单录入的明细与现有所有基准差异过大，无匹配参考，建议纳入新定制单。</div>`; }
+
+            let html = `<div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:6px; font-size:0.9rem;"><div><span style="color:var(--gt-text-sub)">订单号：</span> <strong>${o.order_no}</strong></div><div><span style="color:var(--gt-text-sub)">制造商：</span> ${o.manufacturer}</div><div><span style="color:var(--gt-text-sub)">当前状态：</span> <strong style="color:var(--gt-accent)">${o.status}</strong></div><div><span style="color:var(--gt-text-sub)">系统系列：</span> ${o.series}</div><div><span style="color:var(--gt-text-sub)">适用机床：</span> ${o.applicable_machine}</div><div><span style="color:var(--gt-text-sub)">创建时间：</span> ${o.created_at}</div></div><div style="font-weight:bold; border-bottom:2px solid var(--gt-border); padding-bottom:8px;">包含的硬件清单：</div>${compHtml}${diffHtml}`;
+            let footerHtml = `<button class="btn btn-success" onclick="window.location.href='/api/orders/${o.id}/export'">⬇️ 导出完整 BOM 生产单 (Excel)</button>`;
+            openModal('数控订单全景智能分析', html, footerHtml);
+        }
+
+        async function submitOrder() {
+            // 1. 提取上方三个必填输入框的值并去掉首尾空格
+            const man = document.getElementById('oMan').value.trim();
+            const ser = document.getElementById('oSer').value.trim();
+            const mac = document.getElementById('oMac').value.trim();
+            // (已删除：兼容读取您刚加的电机数量输入框)
+
+            // ⛔ 拦截校验 1：基础信息必须填写完整
+            if (!man || !ser || !mac) {
+                return alert("⚠️ 提交失败：请将【制造商】、【系统系列】和【适用机床】填写完整！");
+            }
+
+            // 2. 收集下方表格录入的部件
+            const comps = [];
+            document.querySelectorAll('#oCompTable tbody tr').forEach(tr => {
+                const mod = tr.querySelector('.o-m').value.trim();
+                if(mod) comps.push({category: tr.querySelector('.o-c').value, model: mod});
+            });
+
+            // ⛔ 拦截校验 2：至少需要一条有效的部件明细
+            if (comps.length === 0) {
+                return alert("⚠️ 提交失败：订单不能是空壳，请至少录入一项有效的【部件明细】！");
+            }
+
+            // ==============================================================================
+            // [新增核心拦截] ⛔ 拦截校验 3：检查填写的部件是否真的是合法的已入库部件
+            const publishedComps = await (await fetch('/api/components?status=已发布')).json();
+            const validModels = publishedComps.map(c => c.model);
+
+            for (let c of comps) {
+                if (!validModels.includes(c.model)) {
+                    return alert(`⚠️ 提交失败：系统库中不存在部件【${c.model}】！\n\n请先前往“数控部件列表”中手动添加该部件，并在审核发布后再来建单。`);
+                }
+            }
+            // ==============================================================================
+
+            // 【核心优化】：自动计算电机数量，拒绝手工死板录入
+            const autoMotCount = comps.filter(c => c.category === '电机').length;
+
+            // [新增修复] 校验全过，组装数据发给后端，包含建单人
+            const payload = {
+                manufacturer: man,
+                series: ser,
+                motor_count: autoMotCount, // <--- 使用 JS 自动统计出的数量
+                drive_count: comps.filter(c => c.category === '驱动').length,
+                applicable_machine: mac,
+                applicant: currentUser, // 记录建单人
+                components: comps
+            };
+
+            await fetch('/api/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+
+            // 提交成功后，清空建单区域的数据，恢复初始状态
+            document.querySelectorAll('#oCompTable tbody tr').forEach((tr, i) => {
+                if(i > 0) tr.remove();
+                else tr.querySelector('.o-m').value = '';
+            });
+            document.getElementById('oMan').value = '';
+            document.getElementById('oSer').value = '';
+            document.getElementById('oMac').value = '';
+            // (已删除：清空重置电机数量输入框的逻辑)
+
+            // 刷新列表
+            loadOrders();
+            loadStats();
+
+            // 触发成功的 UI 弹窗
+            alert("✅ 订单提交成功！已流转至【标准管理员】进行审批。");
+        }
+
+        // [新增] 超级管理员删除订单
+        async function deleteOrder(id) {
+            if (!confirm("⚠️ 确定要彻底删除该订单吗？此操作不可撤销！")) return;
+            try {
+                const res = await fetch(`/api/orders?id=${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert("✅ 订单已删除");
+                    loadOrders();
+                    loadStats();
+                } else {
+                    alert("❌ 删除失败：" + data.message);
+                }
+            } catch (err) {
+                alert("❌ 网络异常，删除失败。");
+            }
+        }
+
+      // --- 核心升级：标准库管理与智能输入 ---
+
+        let globalPublishedComps = [];
+        let currentEditTplId = null; // [新增] 用于记录当前正在修改哪个标准单
+
+        // [修改] 增加默认参数支持，方便回显编辑数据
+        function addTplCompRow(defaultCat = '其他', defaultMod = '') {
+            const tr = document.createElement('tr');
+            const cats = ["电机", "驱动", "系统", "操作部件", "电缆", "服务", "手册", "网络 / 连接配件", "电气安装辅件", "软件 / 功能授权", "其他"];
+            const optionsHtml = cats.map(c => `<option value="${c}" ${c === defaultCat ? 'selected' : ''}>${c}</option>`).join('');
+
+            tr.innerHTML = `
+                <td>
+                    <select class="t-c" onchange="this.closest('tr').querySelector('.t-m').value='';">
+                        ${optionsHtml}
+                    </select>
+                </td>
+                <td>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" class="t-m" placeholder="输入关键字自动联想现有型号 (支持模糊搜索)" style="width:100%;" value="${defaultMod}" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
+                        <div class="autocomplete-list"></div>
+                    </div>
+                </td>
+                <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>`;
+            document.querySelector('#tCompTable tbody').appendChild(tr);
+        }
+
+        // 智能联想核心逻辑
+        function showSuggestions(inputEl) {
+            const val = inputEl.value.trim().toLowerCase();
+            const listEl = inputEl.nextElementSibling;
+            const cat = inputEl.closest('tr').querySelector('.t-c').value; // 获取当前行选中的分类
+
+            // 如果缓存为空，说明还没加载，直接跳过
+            if (globalPublishedComps.length === 0) return;
+
+            // 过滤数据：必须符合当前分类，并且型号中包含输入的关键字
+            let matches = globalPublishedComps.filter(c =>
+                c.category === cat && c.model.toLowerCase().includes(val)
+            );
+
+            // 如果没有匹配项或者输入框失焦且没输入内容，就隐藏列表
+            if (matches.length === 0) {
+                listEl.style.display = 'none';
+                return;
+            }
+
+            // 生成列表 HTML
+            listEl.innerHTML = '';
+            matches.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                // 高亮匹配部分（简单的文本替换展示，不破坏原数据）
+                item.innerHTML = `${m.model} <span>(${m.remark || '无备注'})</span>`;
+                // 点击下拉项时，填入输入框，并隐藏下拉列表
+                item.onclick = function() {
+                    inputEl.value = m.model;
+                    listEl.style.display = 'none';
+                };
+                listEl.appendChild(item);
+            });
+            listEl.style.display = 'block';
+        }
+
+        // 点击页面其他地方时隐藏所有下拉列表
+        document.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('t-m')) {
+                document.querySelectorAll('.autocomplete-list').forEach(l => l.style.display = 'none');
+            }
+        });
+
+        async function loadTemplatePage() {
+            // 每次进入页面，预加载所有已发布的部件，存到全局变量里供联想使用
+            globalPublishedComps = await(await fetch('/api/components?status=已发布')).json();
+
+            // 获取并渲染现有的标准库列表
+            const res = await fetch('/api/templates');
+            globalTplData = await res.json();
+            const b = document.querySelector('#tplTable tbody');
+            b.innerHTML = '';
+
+            globalTplData.forEach(t => {
+                let coreCount = 0, otherCount = 0;
+                Object.keys(t.data).forEach(k => {
+                    if(CORE_CATS.includes(k)) coreCount += (t.data[k] || []).length;
+                    else otherCount += (t.data[k] || []).length;
+                });
+
+                // [新增] 只有超级管理员才有编辑修改权
+                let actionHtml = `<button class="btn btn-outline btn-sm" onclick="showTplDetails(${t.id})">详情</button>`;
+                if (currentRole === '超级管理员') {
+                    actionHtml += ` <button class="btn btn-primary btn-sm" onclick="editTpl(${t.id})">✏️ 编辑</button>`;
+                    actionHtml += ` <button class="btn btn-danger btn-sm" onclick="delT(${t.id})">删除</button>`;
+                }
+
+                b.innerHTML += `<tr>
+                    <td style="color:var(--gt-text-sub);">${t.no}</td>
+                    <td style="font-weight:bold; color:var(--gt-text-main);">${t.name}</td>
+                    <td>
+                        <span class="badge badge-blue">电机数量: ${t.motor_count || 0}</span>
+                        <span class="badge badge-green" style="background:#f6ffed; border-color:#d9d9d9; color:#666;">总部件: ${(coreCount + otherCount) || 0}</span>
+                    </td>
+                    <td>${actionHtml}</td>
+                </tr>`;
+            });
+        }
+
+        // [新增] 点击编辑按钮，将数据回显到上方的表单中
+        function editTpl(id) {
+            const t = globalTplData.find(x => x.id === id);
+            if(!t) return;
+
+            currentEditTplId = id;
+            document.getElementById('tNo').value = t.no;
+            document.getElementById('tName').value = t.name;
+            document.getElementById('tErp').value = t.erp_code || '';
+            // (已删除：赋值给 tMot 的逻辑)
+
+            const btn = document.getElementById('saveTplBtn');
+            btn.innerHTML = '💾 保存基准修改';
+            btn.className = 'btn btn-success';
+
+            document.querySelector('#tCompTable tbody').innerHTML = '';
+            let hasData = false;
+            Object.keys(t.data).forEach(cat => {
+                if(t.data[cat] && t.data[cat].length > 0) {
+                    t.data[cat].forEach(mod => {
+                        addTplCompRow(cat, mod);
+                        hasData = true;
+                    });
+                }
+            });
+            if(!hasData) addTplCompRow();
+
+            document.querySelector('.content-area').scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+       async function saveTemplate() {
+            const name = document.getElementById('tName').value.trim();
+            const no = document.getElementById('tNo').value.trim();
+            const erp = document.getElementById('tErp').value.trim(); // [新增] 获取 ERP
+
+            if(!name || !no) {
+                document.getElementById('alertMessage').innerText = '⚠️ 请输入基准单号和标准订单名称！';
+                document.getElementById('alertModal').classList.add('active');
+                return;
+            }
+
+            const comps = {
+                "电机": [], "驱动": [], "系统": [], "操作部件": [], "电缆": [],
+                "服务": [], "手册": [], "网络 / 连接配件": [], "电气安装辅件": [], "软件 / 功能授权": [], "其他": []
+            };
+
+            document.querySelectorAll('#tCompTable tbody tr').forEach(tr => {
+                const cat = tr.querySelector('.t-c').value;
+                const mod = tr.querySelector('.t-m').value.trim();
+                if(mod && comps[cat] !== undefined) comps[cat].push(mod);
+            });
+
+            // [新增核心拦截] ⛔ 检查填写的部件是否真的是合法的已入库部件
+            const publishedComps = await (await fetch('/api/components?status=已发布')).json();
+            const validModels = publishedComps.map(c => c.model);
+            const allEnteredModels = Object.values(comps).flat();
+
+            for (let mod of allEnteredModels) {
+                if (!validModels.includes(mod)) {
+                    return alert(`⚠️ 保存失败：系统库中不存在部件【${mod}】！\n\n请先前往“数控部件列表”中添加并发布该部件。`);
+                }
+            }
+
+            // 【核心优化】：自动计算电机分类下的数量
+            const autoMotCount = comps["电机"].length;
+
+            // [修改] 发送带 ID 的请求，使用自动计算的电机数
+            const payload = {
+                id: currentEditTplId,
+                no: no,
+                name: name,
+                erp_code: erp, // [新增] 将 ERP 发给后端
+                motor_count: autoMotCount, // <--- 自动计算
+                components: comps
+            };
+
+            const res = await fetch('/api/templates', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            const data = await res.json();
+
+            if (data.status === 'error') return alert("❌ 保存失败：" + data.message);
+            alert("✅ " + data.message);
+
+            // 清空表格与状态恢复
+            currentEditTplId = null;
+            const btn = document.getElementById('saveTplBtn');
+            btn.innerHTML = '✔️ 保存并加入标准订单库';
+            btn.className = 'btn btn-primary';
+
+            // 清空输入框
+            document.getElementById('tName').value = '';
+            document.getElementById('tNo').value = '';
+            document.getElementById('tErp').value = ''; // [新增] 清空 ERP
+            document.querySelectorAll('#tCompTable tbody tr').forEach((tr, i) => {
+                if(i>0) tr.remove();
+                else tr.querySelector('.t-m').value='';
+            });
+
+            loadTemplatePage(); loadStats();
+        }
+
+        async function delT(id) {
+            if(!confirm("确定删除该标准库模型吗？")) return;
+            await fetch(`/api/templates?id=${id}`, {method:'DELETE'});
+            loadTemplatePage(); loadStats(); loadDashTpl();
+        }
+
+        function toggleAddPart() { const box = document.getElementById('addPartBox'); box.style.display = box.style.display === 'none' ? 'block' : 'none'; }
+
+        async function uploadExcel() {
+            const fileInput = document.getElementById('excelFile'); if(!fileInput.files[0]) return;
+            const formData = new FormData(); formData.append('file', fileInput.files[0]);
+            try {
+                const res = await fetch('/api/components/upload', { method: 'POST', body: formData });
+                alert((await res.json()).message); loadLib(); loadStats();
+            } catch (error) { alert("导入异常，请检查文件格式。"); } finally { fileInput.value = ''; }
+        }
+
+        async function submitApply() {
+            const cat = document.getElementById('lCat').value;
+            const mod = document.getElementById('lMod').value.trim();
+            const erp = document.getElementById('lErp').value.trim();
+            const rem = document.getElementById('lRem').value.trim();
+
+            // ⛔ 拦截校验：型号绝对不能为空
+            if (!mod) {
+                return alert("⚠️ 提交失败：必须填写【部件型号】！");
+            }
+
+            const payload = { category: cat, model: mod, erp: erp, remark: rem };
+
+            try {
+                const res = await fetch('/api/components', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                // ⛔ 如果后端返回错误（比如型号重复了），弹出拦截提示
+                if (data.status === 'error') {
+                    return alert("❌ 提交失败：" + data.message);
+                }
+
+                // 提交成功，清空输入框并刷新列表
+                alert("✅ " + data.message);
+                document.getElementById('lMod').value = '';
+                document.getElementById('lErp').value = '';
+                document.getElementById('lRem').value = '';
+                loadLib();
+                toggleAddPart();
+
+            } catch (err) {
+                alert("❌ 网络异常，提交失败。");
+            }
+        }
+
+        function resetLibSearch() { document.getElementById('searchCat').value = '全部'; document.getElementById('searchMod').value = ''; loadLib(); }
+
+        async function loadLib() {
+            let url = '/api/components?';
+            const cat = document.getElementById('searchCat').value, mod = document.getElementById('searchMod').value.trim();
+            if (cat !== '全部') url += `category=${encodeURIComponent(cat)}&`;
+            if (mod !== '') url += `model=${encodeURIComponent(mod)}`;
+
+            const b = document.querySelector('#libTable tbody'); b.innerHTML = '';
+            const comps = await(await fetch(url)).json();
+
+            if(comps.length === 0) {
+                b.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gt-text-sub); padding:20px;">没有找到符合条件的部件数据</td></tr>`;
+                return;
+            }
+
+            comps.forEach(c => {
+                let badgeClass = c.status === '已发布' ? 'badge-green' : (c.status === '待审核' ? 'badge-orange' : 'badge-blue');
+
+                // [新增] 只有超级管理员才能看到删除按钮
+                let actionHtml = '-';
+                if (currentRole === '超级管理员') {
+                    actionHtml = `<button class="btn btn-danger btn-sm" onclick="delComponent(${c.id})">删除</button>`;
+                }
+
+                b.innerHTML += `<tr>
+                    <td style="font-weight:bold;">${c.model}</td>
+                    <td>${c.category}</td>
+                    <td style="color:var(--gt-text-sub);">${c.remark || '-'}</td>
+                    <td><span class="badge ${badgeClass}">${c.status}</span></td>
+                    <td>${actionHtml}</td>
+                </tr>`;
+            });
+        }
+
+        // [新增] 超级管理员删除底层部件
+        async function delComponent(id) {
+            // 使用原生确认框做二次防呆
+            if (!confirm("⚠️ 确定要永久删除该部件吗？删除后将无法在智能联想中搜索到此部件！")) return;
+
+            try {
+                const res = await fetch(`/api/components?id=${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert("✅ " + data.message);
+                    loadLib();    // 刷新表格
+                    loadStats();  // 刷新顶部统计数字
+                } else {
+                    alert("❌ " + data.message);
+                }
+            } catch (err) {
+                alert("❌ 网络异常，删除失败。");
+            }
+        }
+
+        async function loadAudit() {
+            const comps = await(await fetch('/api/components?status=待审核')).json();
+            const b = document.querySelector('#audTable tbody'); b.innerHTML = '';
+            if(comps.length === 0) b.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--gt-text-sub)">目前暂无待办任务</td></tr>`;
+            comps.forEach(c => b.innerHTML += `<tr><td style="color:var(--gt-accent); font-weight:bold;">${c.model}</td><td>${c.category}</td><td><button class="btn btn-outline btn-sm" onclick="doAudit(${c.id})">✓ 准许入库</button></td></tr>`);
+        }
+        async function doAudit(id) { await fetch('/api/components/audit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, action:'已发布'}) }); loadAudit(); loadStats(); }
+
+        // --- 超级管理员：分配用户角色 ---
+        async function loadUsers() {
+            const users = await(await fetch('/api/users')).json();
+            const b = document.querySelector('#usersTable tbody'); b.innerHTML = '';
+            users.forEach(u => {
+                b.innerHTML += `
+                    <tr>
+                        <td style="font-weight:bold;">${u.username}</td>
+                        <td><span class="badge badge-blue">${u.role}</span></td>
+                        <td>
+                            <select class="role-switch" style="width:160px; color:#333; background:#fff; border:1px solid #ccc; padding:6px; border-radius:4px;" onchange="changeUserRole(${u.id}, this.value)">
+                                <option value="">- 重新分配角色 -</option>
+                                <option value="研发工程师">研发工程师</option>
+                                <option value="标准管理员">标准管理员</option>
+                                <option value="采购员">采购员</option>
+                                <option value="超级管理员">超级管理员</option>
+                            </select>
+                        </td>
+                    </tr>`;
+            });
+        }
+        async function changeUserRole(id, newRole) {
+            if(!newRole) return;
+            await fetch('/api/users', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id, role: newRole}) });
+            alert("✅ 用户角色已更新！"); loadUsers();
+        }
+
+        // --- 新增：系统Bug反馈工作流 ---
+        async function loadFeedback() {
+            const listContainer = document.getElementById('fbListContainer');
+
+            // [核心修改] 如果不是超级管理员，直接隐藏下方的列表，且不向后端请求数据
+            if (currentRole !== '超级管理员') {
+                listContainer.style.display = 'none';
+                return;
+            }
+
+            // 如果是超级管理员，显示处理台并拉取数据
+            listContainer.style.display = 'block';
+
+            const res = await fetch(`/api/feedback?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}`);
+            const data = await res.json();
+            const b = document.querySelector('#fbTable tbody');
+            b.innerHTML = '';
+
+            if (data.length === 0) {
+                b.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gt-text-sub); padding:20px;">暂无待处理的反馈</td></tr>`;
+                return;
+            }
+
+            data.forEach(f => {
+                let badgeClass = f.status === '已解决' ? 'badge-green' : 'badge-orange';
+                let actionHtml = '-';
+
+                // 超管处理按钮
+                if (f.status === '待处理') {
+                    actionHtml = `<button class="btn btn-success btn-sm" onclick="resolveFeedback(${f.id})">✔️ 标记已解决</button>`;
+                }
+
+                b.innerHTML += `<tr>
+                    <td style="font-weight:bold;">${f.username}</td>
+                    <td style="font-weight:bold; color:var(--gt-text-main);">${f.title}</td>
+                    <td style="color:var(--gt-text-sub); white-space:pre-wrap;">${f.content}</td>
+                    <td><span class="badge ${badgeClass}">${f.status}</span></td>
+                    <td>${actionHtml}</td>
+                </tr>`;
+            });
+        }
+
+        async function submitFeedback() {
+            const title = document.getElementById('fbTitle').value.trim();
+            const content = document.getElementById('fbContent').value.trim();
+
+            if (!title || !content) {
+                document.getElementById('alertMessage').innerText = '⚠️ 请填写问题简述和详细内容！';
+                document.getElementById('alertModal').classList.add('active');
+                return;
+            }
+
+            await fetch('/api/feedback', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username: currentUser, title: title, content: content })
+            });
+
+            alert("✅ 反馈提交成功！感谢您的建议，超管会尽快处理。");
+            document.getElementById('fbTitle').value = '';
+            document.getElementById('fbContent').value = '';
+            loadFeedback();
+        }
+
+        async function resolveFeedback(id) {
+            await fetch('/api/feedback', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: id })
+            });
+            loadFeedback();
+        }
+
+    </script>
+</body>
+</html>
