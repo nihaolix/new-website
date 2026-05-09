@@ -7,6 +7,7 @@ import random
 import string
 import io
 import pandas as pd
+from collections import Counter  # [新增] 引入计数器，用于精确计算零件数量差异
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -87,11 +88,18 @@ class BugFeedback(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
-# ================= 2. 核心算法 =================
-def calculate_jaccard(set_a, set_b):
-    if not set_a and not set_b: return 1.0
-    intersection = len(set_a.intersection(set_b))
-    union = len(set_a.union(set_b))
+# ================= 2. 核心算法 (升级为关注数量的多重集算法) =================
+def calculate_multiset_score(list_a, list_b):
+    """多重集(包含数量)交并比算法"""
+    if not list_a and not list_b: return 1.0
+    if not list_a or not list_b: return 0.0
+    
+    count_a, count_b = Counter(list_a), Counter(list_b)
+    # 分子：双方都拥有的型号且取【最小数量】的总和
+    intersection = sum((count_a & count_b).values())
+    # 分母：双方拥有的所有型号且取【最大数量】的总和
+    union = sum((count_a | count_b).values())
+    
     return intersection / union if union > 0 else 0
 
 
@@ -149,7 +157,8 @@ def handle_users():
         users = User.query.order_by(User.created_at.asc()).all()
         return jsonify([{"id": u.id, "username": u.username, "role": u.role} for u in users])
     if request.method == 'POST':
-        user = User.query.get(request.json.get('id'))
+        # [修改] SQLAlchemy 2.0 语法
+        user = db.session.get(User, request.json.get('id'))
         if user:
             user.role = request.json.get('role')
             db.session.commit()
@@ -187,8 +196,8 @@ def handle_feedback():
         return jsonify({"status": "success"})
 
     if request.method == 'PUT':
-        # 超管标记已解决
-        f = BugFeedback.query.get(request.json.get('id'))
+        # [修改] SQLAlchemy 2.0 语法
+        f = db.session.get(BugFeedback, request.json.get('id'))
         if f:
             f.status = '已解决'
             db.session.commit()
@@ -199,7 +208,8 @@ def handle_feedback():
 @app.route('/api/orders/workflow', methods=['POST'])
 def order_workflow():
     data = request.json
-    order = CncOrder.query.get(data.get('id'))
+    # [修改] SQLAlchemy 2.0 语法
+    order = db.session.get(CncOrder, data.get('id'))
     action = data.get('action')
     if not order: return jsonify({"status": "error", "message": "订单不存在"})
 
@@ -301,7 +311,8 @@ def handle_components():
 
     # [新增] 处理超级管理员的删除请求
     if request.method == 'DELETE':
-        comp = Component.query.get(request.args.get('id'))
+        # [修改] SQLAlchemy 2.0 语法
+        comp = db.session.get(Component, request.args.get('id'))
         if comp:
             db.session.delete(comp)
             db.session.commit()
@@ -311,7 +322,8 @@ def handle_components():
 
 @app.route('/api/components/audit', methods=['POST'])
 def audit_component():
-    comp = Component.query.get(request.json.get('id'))
+    # [修改] SQLAlchemy 2.0 语法
+    comp = db.session.get(Component, request.json.get('id'))
     if comp: comp.status = request.json.get('action'); db.session.commit(); return jsonify({"status": "success"})
     return jsonify({"status": "error"})
 
@@ -339,7 +351,8 @@ def handle_templates():
             return jsonify({"status": "error", "message": "该标准订单名称已存在！"})
 
         if req_id:
-            tpl = StandardTemplate.query.get(req_id)
+            # [修改] SQLAlchemy 2.0 语法
+            tpl = db.session.get(StandardTemplate, req_id)
             if tpl:
                 tpl.template_no = req_no
                 tpl.name = req_name
@@ -361,14 +374,16 @@ def handle_templates():
             return jsonify({"status": "success", "message": "标准订单创建/保存成功"})
 
     if request.method == 'DELETE':
-        tpl = StandardTemplate.query.get(request.args.get('id'))
+        # [修改] SQLAlchemy 2.0 语法
+        tpl = db.session.get(StandardTemplate, request.args.get('id'))
         if tpl: db.session.delete(tpl); db.session.commit()
         return jsonify({"status": "success"})
 
 
 @app.route('/api/orders/<int:order_id>/export', methods=['GET'])
 def export_order(order_id):
-    order = CncOrder.query.get(order_id)
+    # [修改] SQLAlchemy 2.0 语法
+    order = db.session.get(CncOrder, order_id)
     if not order: return "订单不存在", 404
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -445,46 +460,62 @@ def handle_orders():
     if request.method == 'POST':
         data = request.json
         input_comps = data.get('components', [])
-        parsed = {cat: [] for cat in ALL_CATEGORIES}
+        
+        # 1. 提取新订单的部件列表（保留重复数量）
+        new_motors, new_others, new_all = [], [], []
         for item in input_comps:
             cat = item.get('category', '其他')
-            if item.get('model'): parsed[cat if cat in parsed else '其他'].append(item.get('model').strip())
-        s_new_core, s_new_oth = set(), set()
-        for cat, models in parsed.items():
-            if cat in CORE_CATEGORIES:
-                s_new_core.update(models)
-            else:
-                s_new_oth.update(models)
-        best_tpl, max_score, best_all_set = None, 0.0, set()
+            mod = item.get('model', '').strip()
+            if mod:
+                new_all.append(mod)
+                if cat == '电机':
+                    new_motors.append(mod)
+                else:
+                    new_others.append(mod)
+
+        best_tpl, max_score = None, 0.0
+        best_adds, best_rms = [], []
+
+        # 2. 遍历所有标准库，进行数量级对比
         for tpl in StandardTemplate.query.all():
             try:
                 tpl_data = json.loads(tpl.components_json)
             except Exception:
-                continue  # 如果 JSON 解析失败，直接跳过
-
-            # [防御性拦截] 如果遇到以前遗留的列表格式脏数据，直接跳过，防止程序崩溃
+                continue
+            
             if not isinstance(tpl_data, dict):
                 continue
 
-            s_std_core, s_std_oth = set(), set()
+            tpl_motors, tpl_others, tpl_all = [], [], []
             for cat, models in tpl_data.items():
-                if cat in CORE_CATEGORIES:
-                    s_std_core.update(models)
+                tpl_all.extend(models)
+                if cat == '电机':
+                    tpl_motors.extend(models)
                 else:
-                    s_std_oth.update(models)
-            score = (calculate_jaccard(s_new_core, s_std_core) * 0.7) + (calculate_jaccard(s_new_oth, s_std_oth) * 0.3)
-            if score > max_score: max_score, best_tpl, best_all_set = score, tpl, s_std_core | s_std_oth
+                    tpl_others.extend(models)
 
+            # 【核心逻辑重构】：只看电机型号和数量！电机得分为主导。
+            if new_motors or tpl_motors:
+                score = calculate_multiset_score(new_motors, tpl_motors)
+            else:
+                score = calculate_multiset_score(new_others, tpl_others)
+
+            if score > max_score: 
+                max_score = score
+                best_tpl = tpl
+                
+                # 差异分析：利用 Counter 完美计算出数量差异
+                count_new, count_tpl = Counter(new_all), Counter(tpl_all)
+                best_adds = list((count_new - count_tpl).elements()) 
+                best_rms = list((count_tpl - count_new).elements())  
+
+        # 3. 结果判断与状态定级
         final_order_no = f"{best_tpl.template_no}-M" if max_score >= 0.1 and best_tpl else generate_short_id()
         if max_score >= 0.1 and best_tpl:
-            if CncOrder.query.filter(CncOrder.order_no.like(f"{final_order_no}%")).count() > 0: final_order_no += str(
-                CncOrder.query.filter(CncOrder.order_no.like(f"{final_order_no}%")).count() + 1)
-        matched_name = best_tpl.name if max_score >= 0.1 and best_tpl else "无匹配基准 (差异过大)"
-        # [修复点：给 match_adds 的新集合并集加上括号，保证先并集再做减法]
-        adds_list = list((s_new_core | s_new_oth) - best_all_set)
-        rms_list = list(best_all_set - (s_new_core | s_new_oth))
-
-        # [修改点] 如果分数极低，状态变为待定基准，拦截给超管
+            if CncOrder.query.filter(CncOrder.order_no.like(f"{final_order_no}%")).count() > 0: 
+                final_order_no += str(CncOrder.query.filter(CncOrder.order_no.like(f"{final_order_no}%")).count() + 1)
+                
+        matched_name = best_tpl.name if max_score >= 0.1 and best_tpl else "无匹配基准 (电机差异过大)"
         initial_status = '待定基准' if max_score < 0.1 else '待审批'
 
         db.session.add(CncOrder(
@@ -495,19 +526,20 @@ def handle_orders():
             drive_count=int(data.get('drive_count', 0) or 0),
             applicable_machine=data.get('applicable_machine', '-'),
             applicant=data.get('applicant', '未知'),
-            status=initial_status,  # <--- 换成这个动态状态
+            status=initial_status,
             components_json=json.dumps(input_comps),
             matched_template=matched_name,
             match_score=max_score,
-            match_adds=json.dumps(adds_list),
-            match_rms=json.dumps(rms_list)
+            match_adds=json.dumps(best_adds),
+            match_rms=json.dumps(best_rms)
         ))
         db.session.commit()
         return jsonify({"status": "success", "order_no": final_order_no})
 
     # [核心修改] 超级管理员的删除订单接口
     if request.method == 'DELETE':
-        order = CncOrder.query.get(request.args.get('id'))
+        # [修改] SQLAlchemy 2.0 语法
+        order = db.session.get(CncOrder, request.args.get('id'))
         if order:
             db.session.delete(order)
             db.session.commit()
@@ -538,4 +570,4 @@ def init_database():
 
 if __name__ == '__main__':
     with app.app_context(): init_database()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=6677)

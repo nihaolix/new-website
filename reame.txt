@@ -1,0 +1,8 @@
+pkill -9 gunicorn
+pkill -9 python
+fuser -k 5000/tcp
+python3 -m gunicorn -w 4 -b 0.0.0.0:5000 app413:app --daemon
+python3 -m gunicorn -w 3 --threads 10 -b 0.0.0.0:5000 app0413:app --daemon
+git add .
+git commit -m "修复了检验台账手机端排版换行的问题"
+git push
