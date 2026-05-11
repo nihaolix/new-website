@@ -19,11 +19,13 @@
         ::-webkit-scrollbar-track { background: transparent; }
 
         .sidebar { width: 240px; background: var(--gt-sidebar); color: #a3b1c6; display: flex; flex-direction: column; flex-shrink: 0; z-index: 20; }
-        .logo-area { height: 60px; display: flex; align-items: center; padding: 0 20px; background: #171d2b; color: white; font-size: 1.2rem; font-weight: bold; letter-spacing: 1px; }
-        .logo-icon { width: 28px; height: 28px; background: white; color: #171d2b; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px; font-style: italic; font-weight: 900; }
-
+        
+        /* [修改] 恢复左对齐，并增加 padding 保持边距 */
+        .logo-area { height: 60px; display: flex; align-items: center; padding: 0 24px; background: #171d2b; color: white; font-size: 1.2rem; font-weight: bold; letter-spacing: 1px; }
+        
         .nav-menu { padding: 10px 0; overflow-y: auto; flex: 1; }
-        .nav-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; transition: 0.2s; border-left: 3px solid transparent; }
+        /* [修改] 恢复左对齐，并加入 gap 属性让图标和文字保持间距 */
+        .nav-item { padding: 12px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.2s; border-left: 3px solid transparent; }
         .nav-item:hover { background: var(--gt-sidebar-hover); color: white; }
         .nav-item.active { background: var(--gt-sidebar-hover); color: white; border-left-color: #4da1ff; font-weight: bold; }
 
@@ -70,8 +72,27 @@
         .badge-green { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
         .badge-red { background: #fff1f0; color: #f5222d; border: 1px solid #ffa39e; }
         .badge-orange { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
-        .badge-purple { background: #f9f0ff; color: #722ed1; border: 1px solid #d3adf7; display: inline-block; } /* 新增待定基准色 */
+        .badge-purple { background: #f9f0ff; color: #722ed1; border: 1px solid #d3adf7; display: inline-block; } 
 
+        /* ================= 订单进度条 ================= */
+        .steps-wrapper { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px 10px; background: #fff; border-radius: 6px; border: 1px solid var(--gt-border); }
+        .step-item { display: flex; flex-direction: column; align-items: center; position: relative; flex: 1; z-index: 1; }
+        .step-icon { width: 30px; height: 30px; border-radius: 50%; background: #f0f2f5; border: 2px solid #d9d9d9; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--gt-text-sub); margin-bottom: 8px; transition: 0.3s; z-index: 2; font-size: 0.9rem;}
+        .step-text { font-size: 0.85rem; color: var(--gt-text-sub); font-weight: 500; }
+        .step-line { position: absolute; top: 15px; left: 50%; width: 100%; height: 2px; background: #e8e8e8; z-index: 0; }
+        .step-item:last-child .step-line { display: none; }
+        
+        /* 进度状态 */
+        .step-item.completed .step-icon { background: var(--success); border-color: var(--success); color: white; }
+        .step-item.completed .step-text { color: var(--gt-text-main); }
+        .step-item.completed .step-line { background: var(--success); }
+        
+        .step-item.active .step-icon { background: var(--gt-accent); border-color: var(--gt-accent); color: white; box-shadow: 0 0 0 4px rgba(17,82,197,0.15); }
+        .step-item.active .step-text { color: var(--gt-accent); font-weight: bold; }
+        
+        .step-item.rejected .step-icon { background: var(--danger); border-color: var(--danger); color: white; box-shadow: 0 0 0 4px rgba(240,65,52,0.15); }
+        .step-item.rejected .step-text { color: var(--danger); font-weight: bold; }
+        
         /* ================= 订单卡片流 ================= */
         .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
         .order-card { background: white; border: 1px solid var(--gt-border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; transition: 0.2s; }
@@ -129,15 +150,36 @@
     </div>
 
     <div class="sidebar">
-        <div class="logo-area"><div class="logo-icon">Gt</div> Design X</div>
+        <div class="logo-area" style="font-size: 1.05rem;">数控订单配置清单管理</div>
         <div class="nav-menu">
-            <div class="nav-item active" onclick="showPanel('dashboard', this)">首页概览</div>
-            <div class="nav-item" onclick="showPanel('orders', this)">数控系统订单</div>
-            <div class="nav-item admin-only" onclick="showPanel('templates', this)" style="display:none;">标准订单库</div>
-            <div class="nav-item" onclick="showPanel('library', this)">数控部件列表</div>
-            <div class="nav-item admin-only" onclick="showPanel('audit', this)" style="display:none;">审批工作流</div>
-            <div class="nav-item" onclick="showPanel('feedback', this)">系统Bug反馈</div>
-            <div class="nav-item super-admin-only" onclick="showPanel('users', this)" style="display:none;"> 用户权限配置</div>
+            <div class="nav-item active" onclick="showPanel('dashboard', this)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                首页概览
+            </div>
+            <div class="nav-item" onclick="showPanel('orders', this)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                数控系统订单
+            </div>
+            <div class="nav-item admin-only" onclick="showPanel('templates', this)" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                标准订单库
+            </div>
+            <div class="nav-item" onclick="showPanel('library', this)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                数控部件列表
+            </div>
+            <div class="nav-item admin-only" onclick="showPanel('audit', this)" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                审批工作流
+            </div>
+            <div class="nav-item" onclick="showPanel('feedback', this)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                系统Bug反馈
+            </div>
+            <div class="nav-item super-admin-only" onclick="showPanel('users', this)" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                用户权限配置
+            </div>
         </div>
     </div>
 
@@ -175,7 +217,7 @@
             <div id="orders" class="panel">
                 <div class="card-container eng-only" style="display:none;">
                     <div class="section-title" style="color:var(--gt-accent);">创建新数控订单 & 自动基准匹配</div>
-                    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin-bottom:20px;">
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin-bottom:20px;">
                         <div><label style="font-size:0.9rem;color:var(--gt-text-sub);">制造商</label><input type="text" id="oMan" placeholder="如: 西门子"></div>
                         <div><label style="font-size:0.9rem;color:var(--gt-text-sub);">系统系列</label><input type="text" id="oSer" placeholder="如: <3>S系列"></div>
                         <div><label style="font-size:0.9rem;color:var(--gt-text-sub);">适用机床</label><input type="text" id="oMac" placeholder="如: 五轴/镗铣"></div>
@@ -183,7 +225,7 @@
                     <div style="border-top: 1px dashed var(--gt-border); padding-top: 20px; margin-bottom:20px;">
                         <div style="font-weight: bold; margin-bottom: 10px; color:var(--gt-text-main);">包含的部件明细录入</div>
                         <table id="oCompTable">
-                            <thead><tr><th width="25%">部件分类</th><th>输入部件型号</th><th width="15%">操作</th></tr></thead>
+                            <thead><tr><th width="20%">部件分类</th><th>输入部件型号</th><th width="15%">数量</th><th width="15%">操作</th></tr></thead>
                             <tbody>
                                 <tr>
                                     <td>
@@ -192,6 +234,7 @@
                                         </select>
                                     </td>
                                     <td><input type="text" class="o-m" list="dl-其他" placeholder="双击下拉或输入关键词筛选型号" style="width:100%;"></td>
+                                    <td><input type="number" class="o-qty" min="1" value="1" style="width:100%;"></td>
                                     <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>
                                 </tr>
                             </tbody>
@@ -217,7 +260,7 @@
             <div id="templates" class="panel">
                 <div class="card-container">
                     <div class="section-title">新增标准订单库模型</div>
-
+                    
                     <div style="display:flex; gap:15px; margin-bottom:20px; align-items:center; width: 100%;">
                         <input type="text" id="tNo" placeholder="请输入基准单号 (如 GT-STD-005)" style="flex: 1;">
                         <input type="text" id="tName" placeholder="标准订单名称 (如 典型三轴机床配置单 v1.0)" style="flex: 1;">
@@ -227,7 +270,7 @@
                     <div style="border-top: 1px dashed var(--gt-border); padding-top: 20px; margin-bottom:10px;">
                         <div style="font-weight: bold; margin-bottom: 10px; color:var(--gt-text-main);">配置明细录入</div>
                         <table id="tCompTable">
-                            <thead><tr><th width="25%">部件分类</th><th>选择已入库部件型号</th><th width="15%">操作</th></tr></thead>
+                            <thead><tr><th width="20%">部件分类</th><th>选择已入库部件型号</th><th width="15%">数量</th><th width="15%">操作</th></tr></thead>
                             <tbody>
                                 <tr>
                                     <td>
@@ -241,13 +284,13 @@
                                             <div class="autocomplete-list"></div>
                                         </div>
                                     </td>
+                                    <td><input type="number" class="t-qty" min="1" value="1" style="width:100%;"></td>
                                     <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>
                                 </tr>
                             </tbody>
                         </table>
                         <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="addTplCompRow()">+ 增加一条部件明细</button>
                     </div>
-
                     <div style="text-align: center; margin-top: 20px;">
                         <button id="saveTplBtn" class="btn btn-primary" onclick="saveTemplate()">✔️ 保存并加入标准订单库</button>
                     </div>
@@ -261,40 +304,47 @@
             <div id="library" class="panel">
                 <div class="card-container">
                     <div class="section-title">全部数控部件数据</div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:#f8fafc; padding:12px 15px; border-radius:6px; border:1px solid var(--gt-border);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:#f8fafc; padding:16px 20px; border-radius:6px; border:1px solid var(--gt-border);">
                         <div style="display:flex; gap:10px; align-items:center;">
-                            <div style="font-weight:bold; color:var(--gt-text-sub); margin-right:5px;">🔍 快速检索:</div>
-                            <select id="searchCat" style="width:160px; padding:6px 10px;">
+                            <div style="font-weight:bold; color:var(--gt-text-sub); margin-right:5px; font-size: 1rem;">🔍 快速检索:</div>
+                            
+                            <select id="searchCat" style="width:140px; padding:8px 12px; font-size: 0.95rem; border-radius:4px;">
                                 <option value="全部">全部快速分类</option>
                                 <option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他">其他</option>
                             </select>
-                            <input type="text" id="searchMod" placeholder="输入部件型号关键词..." style="width:350px; padding:6px 10px;">
-                            <button class="btn btn-primary btn-sm" style="width: 80px;" onclick="loadLib()">搜索</button>
-                            <button class="btn btn-outline btn-sm" style="width: 80px;" onclick="resetLibSearch()">重置</button>
+
+                            <input type="text" id="searchMan" placeholder="制造商 (如 西门子)" style="width:140px; padding:8px 12px; font-size: 0.95rem;">
+                            
+                            <input type="text" id="searchMod" placeholder="输入部件型号关键词..." style="width:250px; padding:8px 12px; font-size: 0.95rem;">
+                            
+                            <button class="btn btn-primary" style="width: 80px;" onclick="loadLib()">搜索</button>
+                            <button class="btn btn-outline" style="width: 80px;" onclick="resetLibSearch()">重置</button>
                         </div>
+                        
                         <div style="display:flex; gap:10px;">
-                            <button class="btn btn-primary btn-sm admin-only" onclick="toggleAddPart()" style="display:none;">+ 手动新增部件</button>
+                            <button class="btn btn-primary admin-only" onclick="toggleAddPart()" style="display:none;">+ 手动新增部件</button>
                             <input type="file" id="excelFile" style="display:none" accept=".xlsx, .xls" onchange="uploadExcel()">
-                            <button class="btn btn-success btn-sm admin-only" onclick="document.getElementById('excelFile').click()" style="display:none;">📤 批量导入 (Excel)</button>
+                            <button class="btn btn-success admin-only" onclick="document.getElementById('excelFile').click()" style="display:none;">📤 批量导入 (Excel)</button>
                         </div>
                     </div>
 
                     <div id="addPartBox" style="display:none; background:#fafafa; border:1px solid var(--gt-border); border-radius:6px; padding:15px; margin-bottom:20px; border-left:4px solid var(--success);">
                         <div style="font-weight:bold; margin-bottom:10px;">快速提交入库申请</div>
                         <div style="display:flex; gap:15px; align-items:center;">
-                            <select id="lCat" style="width:140px;">
+                            <select id="lCat" style="width:120px;">
                                 <option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他">其他</option>
                             </select>
-                            <input type="text" id="lMod" placeholder="型号" style="width:160px;">
-                            <input type="text" id="lErp" placeholder="ERP(选填)" style="width:120px;">
-                            <input type="text" id="lRem" placeholder="备注说明(如具体用途)" style="flex:1;">
+                            <input type="text" id="lMan" placeholder="制造商(必填)" style="width:120px;">
+                            <input type="text" id="lMod" placeholder="型号(必填)" style="width:140px;">
+                            <input type="text" id="lErp" placeholder="ERP(选填)" style="width:100px;">
+                            <input type="text" id="lRem" placeholder="备注说明(如用途)" style="flex:1;">
                             <button class="btn btn-primary" onclick="submitApply()">提交</button>
                             <button class="btn btn-outline" onclick="toggleAddPart()">取消</button>
                         </div>
                     </div>
 
                     <table id="libTable">
-                        <thead><tr><th>部件型号</th><th>分类</th><th width="35%">备注说明</th><th>状态</th><th>操作</th></tr></thead>
+                        <thead><tr><th>部件型号</th><th>分类</th><th>制造商</th><th width="30%">备注说明</th><th>状态</th><th>操作</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -330,7 +380,7 @@
                         <button class="btn btn-primary" onclick="submitFeedback()">🚀 提交反馈</button>
                     </div>
                 </div>
-
+                
                 <div class="card-container" id="fbListContainer" style="display:none;">
                     <div class="section-title" id="fbListTitle">🗂️ 全部用户反馈池 (超级管理员处理台)</div>
                     <table id="fbTable">
@@ -459,7 +509,7 @@
             if(id === 'library') loadLib();
             if(id === 'audit') loadAudit();
             if(id === 'users') loadUsers();
-            if(id === 'feedback') loadFeedback(); // [新增]
+            if(id === 'feedback') loadFeedback();
         }
 
         // [新增修复] 获取统计数据时发送当前用户信息
@@ -533,9 +583,10 @@
         }
 
         // --- 订单管理工作流 ---
+        // [修改] 新增明细行也自带数量输入框
         function addOrderCompRow() {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><select class="o-c" onchange="this.closest('tr').querySelector('.o-m').setAttribute('list', 'dl-' + this.value); this.closest('tr').querySelector('.o-m').value='';"><option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他" selected>其他</option></select></td><td><input type="text" class="o-m" list="dl-其他" placeholder="双击下拉或输入关键词筛选型号" style="width:100%;"></td><td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>`;
+            tr.innerHTML = `<td><select class="o-c" onchange="this.closest('tr').querySelector('.o-m').setAttribute('list', 'dl-' + this.value); this.closest('tr').querySelector('.o-m').value='';"><option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他" selected>其他</option></select></td><td><input type="text" class="o-m" list="dl-其他" placeholder="双击下拉或输入关键词筛选型号" style="width:100%;"></td><td><input type="number" class="o-qty" min="1" value="1" style="width:100%;"></td><td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>`;
             document.querySelector('#oCompTable tbody').appendChild(tr);
         }
 
@@ -710,17 +761,65 @@
         function showOrderDetails(id) {
             const o = globalOrdersData.find(x => x.id === id);
             if(!o) return;
+
+            // ================= 1. 计算进度条状态 =================
+            let s1 = 'completed', s2 = '', s3 = '', s4 = '';
+            let i2 = '2', i3 = '3', i4 = '4'; // 默认图标
+
+            if (o.status === '待审批' || o.status === '待定基准') {
+                s2 = 'active';
+            } else if (o.status === '待采购') {
+                s2 = 'completed'; i2 = '✓';
+                s3 = 'active';
+            } else if (o.status === '已完成') {
+                s2 = 'completed'; i2 = '✓';
+                s3 = 'completed'; i3 = '✓';
+                s4 = 'completed'; i4 = '✓';
+            } else if (o.status === '已驳回') {
+                s2 = 'rejected'; i2 = '✕';
+            }
+
+            let progressHtml = `
+                <div class="steps-wrapper">
+                    <div class="step-item ${s1}"><div class="step-line"></div><div class="step-icon">✓</div><div class="step-text">提交申请</div></div>
+                    <div class="step-item ${s2}"><div class="step-line"></div><div class="step-icon">${i2}</div><div class="step-text">方案审核</div></div>
+                    <div class="step-item ${s3}"><div class="step-line"></div><div class="step-icon">${i3}</div><div class="step-text">采购执行</div></div>
+                    <div class="step-item ${s4}"><div class="step-icon">${i4}</div><div class="step-text">交付完结</div></div>
+                </div>
+            `;
+
+            // ================= 2. 构建明细表格与差异分析 =================
             let compHtml = '';
             if(o.components && o.components.length > 0) {
-                compHtml = `<table style="margin-top:10px; margin-bottom:20px;"><thead><tr><th width="30%">部件分类</th><th>型号明细</th></tr></thead><tbody>` + o.components.map(c => `<tr><td><span class="badge ${CORE_CATS.includes(c.category)?'badge-blue':'badge-green'}">${c.category}</span></td><td style="font-weight:bold;">${c.model}</td></tr>`).join('') + `</tbody></table>`;
+                // [修改] 明细表格增加对数量的格式化显示
+                const formatArr = (arr) => {
+                    const cnt = {}; arr.forEach(i => cnt[i.model] = {cat: i.category, q: (cnt[i.model]?.q||0)+1});
+                    return Object.entries(cnt).map(([k,v]) => `<tr><td><span class="badge ${CORE_CATS.includes(v.cat)?'badge-blue':'badge-green'}">${v.cat}</span></td><td style="font-weight:bold;">${k} ${v.q>1 ? `<span style="color:var(--gt-accent); font-weight:bold;">(×${v.q})</span>` : ''}</td></tr>`).join('');
+                };
+                compHtml = `<table style="margin-top:10px; margin-bottom:20px;"><thead><tr><th width="30%">部件分类</th><th>型号明细</th></tr></thead><tbody>` + formatArr(o.components) + `</tbody></table>`;
             } else { compHtml = `<div style="color:var(--gt-text-sub); margin-top:10px; margin-bottom:20px; text-align:center; padding:15px; background:#fafafa; border-radius:4px;">暂无部件明细录入</div>`; }
 
             let diffHtml = '';
             if(o.match_score >= 0.1) {
-                diffHtml = `<div style="font-weight:bold; border-bottom:2px solid var(--gt-border); padding-bottom:8px; margin-bottom:10px; color:var(--gt-accent);">🎯 智能对比：与基准单【${o.matched_template}】差异分析</div><div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;"><div style="background:#f6ffed; border:1px solid #b7eb8f; padding:15px; border-radius:6px;"><strong style="color:var(--success);">[➕ 需在基准上新增配置]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${o.match_adds.length ? o.match_adds.join('<br>') : '无需增配，完全满足'}</div></div><div style="background:#fff1f0; border:1px solid #ffccc7; padding:15px; border-radius:6px;"><strong style="color:var(--danger);">[➖ 需从基准中剔除冗余]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${o.match_rms.length ? '<del>'+o.match_rms.join('</del><br><del>')+'</del>' : '无冗余部件'}</div></div></div>`;
+                const formatArr = (arr) => {
+                    const cnt = {}; arr.forEach(i => cnt[i] = (cnt[i]||0)+1);
+                    return Object.entries(cnt).map(([k,v]) => v>1 ? `${k} <span style="font-weight:bold; color:#1152c5;">(×${v})</span>` : k);
+                };
+                
+                const addsStr = o.match_adds.length ? formatArr(o.match_adds).join('<br>') : '无需增配，完全满足';
+                const rmsStr  = o.match_rms.length  ? '<del>' + formatArr(o.match_rms).join('</del><br><del>') + '</del>' : '无冗余部件';
+
+                diffHtml = `<div style="font-weight:bold; border-bottom:2px solid var(--gt-border); padding-bottom:8px; margin-bottom:10px; color:var(--gt-accent);">🎯 智能对比：与基准单【${o.matched_template}】差异分析</div><div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;"><div style="background:#f6ffed; border:1px solid #b7eb8f; padding:15px; border-radius:6px;"><strong style="color:var(--success);">[➕ 需在基准上新增配置]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${addsStr}</div></div><div style="background:#fff1f0; border:1px solid #ffccc7; padding:15px; border-radius:6px;"><strong style="color:var(--danger);">[➖ 需从基准中剔除冗余]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${rmsStr}</div></div></div>`;
             } else { diffHtml = `<div style="margin-top:20px; padding:15px; background:#fff1f0; border:1px solid #ffccc7; border-radius:6px; color:var(--danger); font-weight:bold; text-align:center;">⚠️ 本单录入的明细与现有所有基准差异过大，无匹配参考，建议纳入新定制单。</div>`; }
 
-            let html = `<div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:6px; font-size:0.9rem;"><div><span style="color:var(--gt-text-sub)">订单号：</span> <strong>${o.order_no}</strong></div><div><span style="color:var(--gt-text-sub)">制造商：</span> ${o.manufacturer}</div><div><span style="color:var(--gt-text-sub)">当前状态：</span> <strong style="color:var(--gt-accent)">${o.status}</strong></div><div><span style="color:var(--gt-text-sub)">系统系列：</span> ${o.series}</div><div><span style="color:var(--gt-text-sub)">适用机床：</span> ${o.applicable_machine}</div><div><span style="color:var(--gt-text-sub)">创建时间：</span> ${o.created_at}</div></div><div style="font-weight:bold; border-bottom:2px solid var(--gt-border); padding-bottom:8px;">包含的硬件清单：</div>${compHtml}${diffHtml}`;
+            // ================= 3. 拼接并弹窗 =================
+            let html = `
+                ${progressHtml}
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:6px; font-size:0.9rem;"><div><span style="color:var(--gt-text-sub)">订单号：</span> <strong>${o.order_no}</strong></div><div><span style="color:var(--gt-text-sub)">制造商：</span> ${o.manufacturer}</div><div><span style="color:var(--gt-text-sub)">当前状态：</span> <strong style="color:var(--gt-accent)">${o.status}</strong></div><div><span style="color:var(--gt-text-sub)">系统系列：</span> ${o.series}</div><div><span style="color:var(--gt-text-sub)">适用机床：</span> ${o.applicable_machine}</div><div><span style="color:var(--gt-text-sub)">创建时间：</span> ${o.created_at}</div></div>
+                <div style="font-weight:bold; border-bottom:2px solid var(--gt-border); padding-bottom:8px;">包含的硬件清单：</div>
+                ${compHtml}
+                ${diffHtml}
+            `;
             let footerHtml = `<button class="btn btn-success" onclick="window.location.href='/api/orders/${o.id}/export'">⬇️ 导出完整 BOM 生产单 (Excel)</button>`;
             openModal('数控订单全景智能分析', html, footerHtml);
         }
@@ -739,9 +838,16 @@
 
             // 2. 收集下方表格录入的部件
             const comps = [];
+            // [修改] 处理数量，将数量转化为多条相同的记录存入后端
             document.querySelectorAll('#oCompTable tbody tr').forEach(tr => {
                 const mod = tr.querySelector('.o-m').value.trim();
-                if(mod) comps.push({category: tr.querySelector('.o-c').value, model: mod});
+                const qtyInput = tr.querySelector('.o-qty');
+                const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+                if(mod) {
+                    for(let i=0; i<qty; i++) {
+                        comps.push({category: tr.querySelector('.o-c').value, model: mod});
+                    }
+                }
             });
 
             // ⛔ 拦截校验 2：至少需要一条有效的部件明细
@@ -780,7 +886,11 @@
             // 提交成功后，清空建单区域的数据，恢复初始状态
             document.querySelectorAll('#oCompTable tbody tr').forEach((tr, i) => {
                 if(i > 0) tr.remove();
-                else tr.querySelector('.o-m').value = '';
+                else {
+                    tr.querySelector('.o-m').value = '';
+                    // [修改] 提交后重置数量为 1
+                    tr.querySelector('.o-qty').value = '1';
+                }
             });
             document.getElementById('oMan').value = '';
             document.getElementById('oSer').value = '';
@@ -818,8 +928,8 @@
         let globalPublishedComps = [];
         let currentEditTplId = null; // [新增] 用于记录当前正在修改哪个标准单
 
-        // [修改] 增加默认参数支持，方便回显编辑数据
-        function addTplCompRow(defaultCat = '其他', defaultMod = '') {
+        // [修改] 增加默认参数支持，方便回显编辑数据，支持数量
+        function addTplCompRow(defaultCat = '其他', defaultMod = '', defaultQty = 1) {
             const tr = document.createElement('tr');
             const cats = ["电机", "驱动", "系统", "操作部件", "电缆", "服务", "手册", "网络 / 连接配件", "电气安装辅件", "软件 / 功能授权", "其他"];
             const optionsHtml = cats.map(c => `<option value="${c}" ${c === defaultCat ? 'selected' : ''}>${c}</option>`).join('');
@@ -836,6 +946,7 @@
                         <div class="autocomplete-list"></div>
                     </div>
                 </td>
+                <td><input type="number" class="t-qty" min="1" value="${defaultQty}" style="width:100%;"></td>
                 <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>`;
             document.querySelector('#tCompTable tbody').appendChild(tr);
         }
@@ -939,8 +1050,11 @@
             let hasData = false;
             Object.keys(t.data).forEach(cat => {
                 if(t.data[cat] && t.data[cat].length > 0) {
-                    t.data[cat].forEach(mod => {
-                        addTplCompRow(cat, mod);
+                    // [修改] 利用数量机制，将相同的型号合并后回显数量
+                    const counts = {};
+                    t.data[cat].forEach(mod => counts[mod] = (counts[mod] || 0) + 1);
+                    Object.entries(counts).forEach(([mod, qty]) => {
+                        addTplCompRow(cat, mod, qty);
                         hasData = true;
                     });
                 }
@@ -966,10 +1080,18 @@
                 "服务": [], "手册": [], "网络 / 连接配件": [], "电气安装辅件": [], "软件 / 功能授权": [], "其他": []
             };
 
+            // [修改] 保存时也根据填写的数量添加多次
             document.querySelectorAll('#tCompTable tbody tr').forEach(tr => {
                 const cat = tr.querySelector('.t-c').value;
                 const mod = tr.querySelector('.t-m').value.trim();
-                if(mod && comps[cat] !== undefined) comps[cat].push(mod);
+                const qtyInput = tr.querySelector('.t-qty');
+                const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+                
+                if(mod && comps[cat] !== undefined) {
+                    for(let i=0; i<qty; i++) {
+                        comps[cat].push(mod);
+                    }
+                }
             });
 
             // [新增核心拦截] ⛔ 检查填写的部件是否真的是合法的已入库部件
@@ -1014,7 +1136,10 @@
             document.getElementById('tErp').value = ''; // [新增] 清空 ERP
             document.querySelectorAll('#tCompTable tbody tr').forEach((tr, i) => {
                 if(i>0) tr.remove();
-                else tr.querySelector('.t-m').value='';
+                else {
+                    tr.querySelector('.t-m').value='';
+                    tr.querySelector('.t-qty').value='1'; // 重置数量
+                }
             });
 
             loadTemplatePage(); loadStats();
@@ -1040,6 +1165,7 @@
         async function submitApply() {
             const cat = document.getElementById('lCat').value;
             const mod = document.getElementById('lMod').value.trim();
+            const man = document.getElementById('lMan').value.trim(); // 接收制造商
             const erp = document.getElementById('lErp').value.trim();
             const rem = document.getElementById('lRem').value.trim();
 
@@ -1048,7 +1174,7 @@
                 return alert("⚠️ 提交失败：必须填写【部件型号】！");
             }
 
-            const payload = { category: cat, model: mod, erp: erp, remark: rem };
+            const payload = { category: cat, model: mod, manufacturer: man, erp: erp, remark: rem };
 
             try {
                 const res = await fetch('/api/components', {
@@ -1066,6 +1192,7 @@
                 // 提交成功，清空输入框并刷新列表
                 alert("✅ " + data.message);
                 document.getElementById('lMod').value = '';
+                document.getElementById('lMan').value = '';
                 document.getElementById('lErp').value = '';
                 document.getElementById('lRem').value = '';
                 loadLib();
@@ -1076,19 +1203,23 @@
             }
         }
 
-        function resetLibSearch() { document.getElementById('searchCat').value = '全部'; document.getElementById('searchMod').value = ''; loadLib(); }
+        function resetLibSearch() { document.getElementById('searchCat').value = '全部'; document.getElementById('searchMod').value = ''; document.getElementById('searchMan').value = ''; loadLib(); }
 
         async function loadLib() {
             let url = '/api/components?';
-            const cat = document.getElementById('searchCat').value, mod = document.getElementById('searchMod').value.trim();
+            const cat = document.getElementById('searchCat').value;
+            const mod = document.getElementById('searchMod').value.trim();
+            const man = document.getElementById('searchMan').value.trim(); // 获取搜索制造商
+            
             if (cat !== '全部') url += `category=${encodeURIComponent(cat)}&`;
-            if (mod !== '') url += `model=${encodeURIComponent(mod)}`;
+            if (mod !== '') url += `model=${encodeURIComponent(mod)}&`;
+            if (man !== '') url += `manufacturer=${encodeURIComponent(man)}`;
 
             const b = document.querySelector('#libTable tbody'); b.innerHTML = '';
             const comps = await(await fetch(url)).json();
 
             if(comps.length === 0) {
-                b.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gt-text-sub); padding:20px;">没有找到符合条件的部件数据</td></tr>`;
+                b.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--gt-text-sub); padding:20px;">没有找到符合条件的部件数据</td></tr>`;
                 return;
             }
 
@@ -1104,6 +1235,7 @@
                 b.innerHTML += `<tr>
                     <td style="font-weight:bold;">${c.model}</td>
                     <td>${c.category}</td>
+                    <td><span class="badge badge-blue" style="background:transparent; border-color:#d9d9d9; color:#666;">${c.manufacturer || '-'}</span></td>
                     <td style="color:var(--gt-text-sub);">${c.remark || '-'}</td>
                     <td><span class="badge ${badgeClass}">${c.status}</span></td>
                     <td>${actionHtml}</td>
@@ -1173,7 +1305,7 @@
             // [核心修改] 如果不是超级管理员，直接隐藏下方的列表，且不向后端请求数据
             if (currentRole !== '超级管理员') {
                 listContainer.style.display = 'none';
-                return;
+                return; 
             }
 
             // 如果是超级管理员，显示处理台并拉取数据
@@ -1192,7 +1324,7 @@
             data.forEach(f => {
                 let badgeClass = f.status === '已解决' ? 'badge-green' : 'badge-orange';
                 let actionHtml = '-';
-
+                
                 // 超管处理按钮
                 if (f.status === '待处理') {
                     actionHtml = `<button class="btn btn-success btn-sm" onclick="resolveFeedback(${f.id})">✔️ 标记已解决</button>`;
@@ -1217,13 +1349,13 @@
                 document.getElementById('alertModal').classList.add('active');
                 return;
             }
-
+            
             await fetch('/api/feedback', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ username: currentUser, title: title, content: content })
             });
-
+            
             alert("✅ 反馈提交成功！感谢您的建议，超管会尽快处理。");
             document.getElementById('fbTitle').value = '';
             document.getElementById('fbContent').value = '';

@@ -7,12 +7,12 @@ import random
 import string
 import io
 import pandas as pd
-from collections import Counter  # [新增] 引入计数器，用于精确计算零件数量差异
+from collections import Counter
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
-# [结构变更] 使用 v12 数据库以支持反馈模块
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'gt_cnc_v12.db')
+# [结构变更] 升级为 v13 数据库，支持部件制造商字段
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'gt_cnc_v13.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -28,21 +28,20 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
-    password = db.Column(db.String(50), nullable=False)  # [新增] 密码字段
-    role = db.Column(db.String(50), nullable=False)  # 研发工程师, 标准管理员, 采购员, 超级管理员
+    password = db.Column(db.String(50), nullable=False)  
+    role = db.Column(db.String(50), nullable=False)  
     created_at = db.Column(db.DateTime, default=datetime.now)
-
 
 class Component(db.Model):
     __tablename__ = 'components'
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(50), nullable=False)
+    manufacturer = db.Column(db.String(100), default='未知') # [新增] 制造商字段
     model = db.Column(db.String(100), unique=True, nullable=False)
     erp_code = db.Column(db.String(50))
     remark = db.Column(db.String(255))
     status = db.Column(db.String(20), default='待审核')
     created_at = db.Column(db.DateTime, default=datetime.now)
-
 
 class StandardTemplate(db.Model):
     __tablename__ = 'standard_templates'
@@ -53,7 +52,6 @@ class StandardTemplate(db.Model):
     components_json = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     erp_code = db.Column(db.String(50), default='')
-
 
 class CncOrder(db.Model):
     __tablename__ = 'cnc_orders'
@@ -67,8 +65,8 @@ class CncOrder(db.Model):
     applicant = db.Column(db.String(50))
     applicable_machine = db.Column(db.String(50))
     status = db.Column(db.String(20), default='待审批')
-    reject_reason = db.Column(db.String(255))  # 驳回原因
-    approve_remark = db.Column(db.String(255))  # [新增] 通过备注
+    reject_reason = db.Column(db.String(255))  
+    approve_remark = db.Column(db.String(255))  
     components_json = db.Column(db.Text, default='[]')
     matched_template = db.Column(db.String(100), default='无匹配基准')
     match_score = db.Column(db.Float, default=0.0)
@@ -76,8 +74,6 @@ class CncOrder(db.Model):
     match_rms = db.Column(db.Text, default='[]')
     created_at = db.Column(db.DateTime, default=datetime.now)
 
-
-# [新增] Bug反馈数据模型
 class BugFeedback(db.Model):
     __tablename__ = 'bug_feedbacks'
     id = db.Column(db.Integer, primary_key=True)
@@ -88,20 +84,16 @@ class BugFeedback(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
-# ================= 2. 核心算法 (升级为关注数量的多重集算法) =================
+# ================= 2. 核心算法 =================
 def calculate_multiset_score(list_a, list_b):
-    """多重集(包含数量)交并比算法"""
     if not list_a and not list_b: return 1.0
     if not list_a or not list_b: return 0.0
     
     count_a, count_b = Counter(list_a), Counter(list_b)
-    # 分子：双方都拥有的型号且取【最小数量】的总和
     intersection = sum((count_a & count_b).values())
-    # 分母：双方拥有的所有型号且取【最大数量】的总和
     union = sum((count_a | count_b).values())
     
     return intersection / union if union > 0 else 0
-
 
 def generate_short_id():
     return 'N' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
@@ -112,7 +104,6 @@ def generate_short_id():
 def index(): return render_template('index.html')
 
 
-# --- [新增] 登录接口 ---
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -138,9 +129,8 @@ def get_stats():
     elif r == '采购员':
         orders = CncOrder.query.filter_by(status='待采购').count()
         pending = 0
-    else:  # 超级管理员
+    else: 
         orders = CncOrder.query.count()
-        # [修改点] 超管的待办包含：普通的待审批 + 异常的待定基准
         pending = CncOrder.query.filter(CncOrder.status.in_(['待审批', '待定基准'])).count()
 
     return jsonify({
@@ -150,14 +140,12 @@ def get_stats():
     })
 
 
-# --- 用户角色管理 API ---
 @app.route('/api/users', methods=['GET', 'POST'])
 def handle_users():
     if request.method == 'GET':
         users = User.query.order_by(User.created_at.asc()).all()
         return jsonify([{"id": u.id, "username": u.username, "role": u.role} for u in users])
     if request.method == 'POST':
-        # [修改] SQLAlchemy 2.0 语法
         user = db.session.get(User, request.json.get('id'))
         if user:
             user.role = request.json.get('role')
@@ -166,14 +154,12 @@ def handle_users():
         return jsonify({"status": "error"})
 
 
-# --- 系统 Bug 反馈 API ---
 @app.route('/api/feedback', methods=['GET', 'POST', 'PUT'])
 def handle_feedback():
     if request.method == 'GET':
         u = request.args.get('username', '')
         r = request.args.get('role', '')
 
-        # 权限隔离：超管看全部，其他人只能看自己提交的
         if r == '超级管理员':
             feedbacks = BugFeedback.query.order_by(BugFeedback.created_at.desc()).all()
         else:
@@ -196,7 +182,6 @@ def handle_feedback():
         return jsonify({"status": "success"})
 
     if request.method == 'PUT':
-        # [修改] SQLAlchemy 2.0 语法
         f = db.session.get(BugFeedback, request.json.get('id'))
         if f:
             f.status = '已解决'
@@ -208,7 +193,6 @@ def handle_feedback():
 @app.route('/api/orders/workflow', methods=['POST'])
 def order_workflow():
     data = request.json
-    # [修改] SQLAlchemy 2.0 语法
     order = db.session.get(CncOrder, data.get('id'))
     action = data.get('action')
     if not order: return jsonify({"status": "error", "message": "订单不存在"})
@@ -223,18 +207,15 @@ def order_workflow():
         order.approve_remark = ''
     elif action == 'complete':
         order.status = '已完成'
-    # [新增] 超级管理员：特批定制（不建库，直接流转给标准管理员）
     elif action == 'skip_baseline':
         order.status = '待审批'
         order.approve_remark = "[超管特批流转] " + data.get('remark', '')
         order.reject_reason = ''
-    # [新增] 超级管理员：一键将此单存为新基准，并流转
     elif action == 'set_baseline':
         order.status = '待审批'
         order.approve_remark = "[超管已确立新基准] " + data.get('remark', '')
         order.reject_reason = ''
 
-        # 【核心修复】：将订单的 List 结构转换为基准库的 Dict 结构
         order_comps = json.loads(order.components_json)
         tpl_comps = {cat: [] for cat in ALL_CATEGORIES}
         for c in order_comps:
@@ -244,16 +225,14 @@ def order_workflow():
                 if cat not in tpl_comps: tpl_comps[cat] = []
                 tpl_comps[cat].append(mod)
 
-        # 自动在数据库中生成一个新模板
         new_tpl_no = f"GT-STD-N{generate_short_id()[:4]}"
         db.session.add(StandardTemplate(
             template_no=new_tpl_no,
             name=f"基于 {order.order_no} 自动生成的定制基准",
             motor_count=order.motor_count,
-            components_json=json.dumps(tpl_comps)  # 存入转换后的正确格式
+            components_json=json.dumps(tpl_comps) 
         ))
 
-        # 顺便把这笔订单的差异清空（因为它现在自己就是基准了）
         order.matched_template = f"新基准: {new_tpl_no}"
         order.match_score = 1.0
         order.match_adds = '[]'
@@ -263,20 +242,26 @@ def order_workflow():
     return jsonify({"status": "success"})
 
 
-# --- 订单、模板、部件等原有 API ---
 @app.route('/api/components/upload', methods=['POST'])
 def upload_components():
     if 'file' not in request.files: return jsonify({"status": "error", "message": "未接收到文件"})
     try:
-        df = pd.read_excel(request.files['file'])
+        df = pd.read_excel(request.files['file'], engine='openpyxl')
         success_count, skip_count = 0, 0
         for r in df.to_dict('records'):
             model = str(r.get('型号', '')).strip()
             if not model or model == 'nan': continue
             cat = str(r.get('分类', '其他')).strip()
+            # [新增] 导入时也能读取制造商列
+            manuf = str(r.get('制造商', '未知')).strip()
+            if manuf == 'nan': manuf = '未知'
+            
             if not Component.query.filter_by(model=model).first():
-                db.session.add(Component(category=cat if cat in ALL_CATEGORIES else '其他', model=model,
-                                         erp_code=str(r.get('ERP', '')).strip(), remark=str(r.get('备注', '')).strip(),
+                db.session.add(Component(category=cat if cat in ALL_CATEGORIES else '其他', 
+                                         model=model,
+                                         manufacturer=manuf,
+                                         erp_code=str(r.get('ERP', '')).strip(), 
+                                         remark=str(r.get('备注', '')).strip(),
                                          status='已发布'))
                 success_count += 1
             else:
@@ -295,23 +280,27 @@ def handle_components():
         if request.args.get('status'): query = query.filter_by(status=request.args.get('status'))
         if request.args.get('category') and request.args.get('category') != '全部': query = query.filter_by(
             category=request.args.get('category'))
+        # [新增] 支持制造商模糊搜索
+        if request.args.get('manufacturer'): query = query.filter(Component.manufacturer.like(f"%{request.args.get('manufacturer')}%"))
         if request.args.get('model'): query = query.filter(Component.model.like(f"%{request.args.get('model')}%"))
         comps = query.order_by(Component.created_at.desc()).all()
-        return jsonify([{"id": c.id, "category": c.category, "model": c.model, "erp": c.erp_code, "remark": c.remark,
+        # [新增] 返回时带上 manufacturer
+        return jsonify([{"id": c.id, "category": c.category, "manufacturer": c.manufacturer, "model": c.model, "erp": c.erp_code, "remark": c.remark,
                          "status": c.status} for c in comps])
 
     if request.method == 'POST':
         if Component.query.filter_by(model=request.json.get('model', '').strip()).first(): return jsonify(
             {"status": "error", "message": "型号已存在"})
         db.session.add(
-            Component(category=request.json.get('category', '其他'), model=request.json.get('model', '').strip(),
-                      erp_code=request.json.get('erp'), remark=request.json.get('remark'), status='待审核'))
+            Component(category=request.json.get('category', '其他'), 
+                      manufacturer=request.json.get('manufacturer', '未知').strip(), # [新增] 保存制造商
+                      model=request.json.get('model', '').strip(),
+                      erp_code=request.json.get('erp'), 
+                      remark=request.json.get('remark'), status='待审核'))
         db.session.commit()
         return jsonify({"status": "success", "message": "已提交申请"})
 
-    # [新增] 处理超级管理员的删除请求
     if request.method == 'DELETE':
-        # [修改] SQLAlchemy 2.0 语法
         comp = db.session.get(Component, request.args.get('id'))
         if comp:
             db.session.delete(comp)
@@ -322,7 +311,6 @@ def handle_components():
 
 @app.route('/api/components/audit', methods=['POST'])
 def audit_component():
-    # [修改] SQLAlchemy 2.0 语法
     comp = db.session.get(Component, request.json.get('id'))
     if comp: comp.status = request.json.get('action'); db.session.commit(); return jsonify({"status": "success"})
     return jsonify({"status": "error"})
@@ -331,16 +319,14 @@ def audit_component():
 @app.route('/api/templates', methods=['GET', 'POST', 'DELETE'])
 def handle_templates():
     if request.method == 'GET':
-        # [修改] 增加返回 erp_code
-        return jsonify(
-            [{"id": t.id, "no": t.template_no, "name": t.name, "erp_code": t.erp_code, "motor_count": t.motor_count,
-              "data": json.loads(t.components_json)} for t in
-             StandardTemplate.query.order_by(StandardTemplate.created_at.desc()).all()])
+        return jsonify([{"id": t.id, "no": t.template_no, "name": t.name, "erp_code": t.erp_code, "motor_count": t.motor_count,
+                         "data": json.loads(t.components_json)} for t in
+                        StandardTemplate.query.order_by(StandardTemplate.created_at.desc()).all()])
     if request.method == 'POST':
         req_id = request.json.get('id')
         req_no = request.json.get('no', "TPL-" + datetime.now().strftime("%Y%m%d%H%M%S"))
         req_name = request.json.get('name')
-        req_erp = request.json.get('erp_code', '')  # [新增] 获取前端传来的 ERP
+        req_erp = request.json.get('erp_code', '') 
 
         existing_no = StandardTemplate.query.filter_by(template_no=req_no).first()
         if existing_no and str(existing_no.id) != str(req_id):
@@ -351,12 +337,11 @@ def handle_templates():
             return jsonify({"status": "error", "message": "该标准订单名称已存在！"})
 
         if req_id:
-            # [修改] SQLAlchemy 2.0 语法
             tpl = db.session.get(StandardTemplate, req_id)
             if tpl:
                 tpl.template_no = req_no
                 tpl.name = req_name
-                tpl.erp_code = req_erp  # [新增] 更新 ERP
+                tpl.erp_code = req_erp
                 tpl.motor_count = int(request.json.get('motor_count', 0))
                 tpl.components_json = json.dumps(request.json.get('components'))
                 db.session.commit()
@@ -366,7 +351,7 @@ def handle_templates():
             db.session.add(StandardTemplate(
                 template_no=req_no,
                 name=req_name,
-                erp_code=req_erp,  # [新增] 保存 ERP
+                erp_code=req_erp, 
                 motor_count=int(request.json.get('motor_count', 0)),
                 components_json=json.dumps(request.json.get('components'))
             ))
@@ -374,7 +359,6 @@ def handle_templates():
             return jsonify({"status": "success", "message": "标准订单创建/保存成功"})
 
     if request.method == 'DELETE':
-        # [修改] SQLAlchemy 2.0 语法
         tpl = db.session.get(StandardTemplate, request.args.get('id'))
         if tpl: db.session.delete(tpl); db.session.commit()
         return jsonify({"status": "success"})
@@ -382,7 +366,6 @@ def handle_templates():
 
 @app.route('/api/orders/<int:order_id>/export', methods=['GET'])
 def export_order(order_id):
-    # [修改] SQLAlchemy 2.0 语法
     order = db.session.get(CncOrder, order_id)
     if not order: return "订单不存在", 404
     output = io.BytesIO()
@@ -429,16 +412,13 @@ def handle_orders():
 
         query = CncOrder.query
 
-        # [核心修改] 角色隔离：谁该看什么状态的单子
         if r == '研发工程师':
             query = query.filter_by(applicant=u)
         elif r == '标准管理员':
             query = query.filter_by(status='待审批')
         elif r == '采购员':
             query = query.filter_by(status='待采购')
-        # 超级管理员什么都能看，无需加 filter
 
-        # [核心修改] 搜索过滤支持
         if search:
             query = query.filter(db.or_(
                 CncOrder.order_no.like(f"%{search}%"),
@@ -454,14 +434,13 @@ def handle_orders():
             "components": json.loads(o.components_json), "matched_template": o.matched_template,
             "match_score": o.match_score, "match_adds": json.loads(o.match_adds),
             "match_rms": json.loads(o.match_rms), "created_at": o.created_at.strftime("%Y-%m-%d %H:%M"),
-            "applicant": o.applicant  # [核心修改] 返回建单人
+            "applicant": o.applicant  
         } for o in orders])
 
     if request.method == 'POST':
         data = request.json
         input_comps = data.get('components', [])
         
-        # 1. 提取新订单的部件列表（保留重复数量）
         new_motors, new_others, new_all = [], [], []
         for item in input_comps:
             cat = item.get('category', '其他')
@@ -476,7 +455,6 @@ def handle_orders():
         best_tpl, max_score = None, 0.0
         best_adds, best_rms = [], []
 
-        # 2. 遍历所有标准库，进行数量级对比
         for tpl in StandardTemplate.query.all():
             try:
                 tpl_data = json.loads(tpl.components_json)
@@ -494,7 +472,6 @@ def handle_orders():
                 else:
                     tpl_others.extend(models)
 
-            # 【核心逻辑重构】：只看电机型号和数量！电机得分为主导。
             if new_motors or tpl_motors:
                 score = calculate_multiset_score(new_motors, tpl_motors)
             else:
@@ -504,12 +481,10 @@ def handle_orders():
                 max_score = score
                 best_tpl = tpl
                 
-                # 差异分析：利用 Counter 完美计算出数量差异
                 count_new, count_tpl = Counter(new_all), Counter(tpl_all)
                 best_adds = list((count_new - count_tpl).elements()) 
                 best_rms = list((count_tpl - count_new).elements())  
 
-        # 3. 结果判断与状态定级
         final_order_no = f"{best_tpl.template_no}-M" if max_score >= 0.1 and best_tpl else generate_short_id()
         if max_score >= 0.1 and best_tpl:
             if CncOrder.query.filter(CncOrder.order_no.like(f"{final_order_no}%")).count() > 0: 
@@ -536,9 +511,7 @@ def handle_orders():
         db.session.commit()
         return jsonify({"status": "success", "order_no": final_order_no})
 
-    # [核心修改] 超级管理员的删除订单接口
     if request.method == 'DELETE':
-        # [修改] SQLAlchemy 2.0 语法
         order = db.session.get(CncOrder, request.args.get('id'))
         if order:
             db.session.delete(order)
@@ -549,7 +522,6 @@ def handle_orders():
 
 def init_database():
     db.create_all()
-    # [初始化生成四大角色账号]
     if User.query.count() == 0:
         db.session.bulk_save_objects([
             User(username="admin", password="123456", role="超级管理员"),
@@ -558,9 +530,10 @@ def init_database():
             User(username="chen", password="1", role="研发工程师")
         ])
     if Component.query.count() == 0:
+        # [修改] 预置数据增加制造商
         db.session.bulk_save_objects(
-            [Component(category="电机", model="SIMOTICS-1FK7", remark="西门子伺服主轴电机", status="已发布"),
-             Component(category="驱动", model="SINAMICS-S120", remark="多轴驱动模块底座", status="已发布")])
+            [Component(category="电机", manufacturer="西门子", model="SIMOTICS-1FK7", remark="西门子伺服主轴电机", status="已发布"),
+             Component(category="驱动", manufacturer="西门子", model="SINAMICS-S120", remark="多轴驱动模块底座", status="已发布")])
     if StandardTemplate.query.count() == 0:
         db.session.add(StandardTemplate(template_no="GT-STD-001", name="典型机床配置基准单 v1.0", motor_count=3,
                                         components_json=json.dumps(
