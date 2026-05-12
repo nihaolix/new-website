@@ -205,7 +205,7 @@
                 </div>
                 <div class="card-container">
                     <div class="section-title"><span>标准订单基准库阅览</span></div>
-                    <table id="dashTplTable"><thead><tr><th>标准单名称</th><th>结构概览</th><th>操作</th></tr></thead><tbody></tbody></table>
+                    <table id="dashTplTable"><thead><tr><th>数控系统类型</th><th>结构概览</th><th>操作</th></tr></thead><tbody></tbody></table>
                     <div class="pagination">
                         <button class="btn btn-outline btn-sm" id="btnPrev" onclick="prevPage()">上一页</button>
                         <span class="page-info" id="pageInfo">第 1 / 1 页</span>
@@ -255,6 +255,11 @@
                     </div>
                 </div>
                 <div class="order-grid" id="orderGrid"></div>
+                <div class="pagination" style="margin-top: 20px;">
+                    <button class="btn btn-outline btn-sm" id="btnPrevOrder" onclick="prevOrderPage()">上一页</button>
+                    <span class="page-info" id="orderPageInfo">第 1 / 1 页</span>
+                    <button class="btn btn-outline btn-sm" id="btnNextOrder" onclick="nextOrderPage()">下一页</button>
+                </div>
             </div>
 
             <div id="templates" class="panel">
@@ -262,8 +267,8 @@
                     <div class="section-title">新增标准订单库模型</div>
                     
                     <div style="display:flex; gap:15px; margin-bottom:20px; align-items:center; width: 100%;">
-                        <input type="text" id="tNo" placeholder="请输入基准单号 (如 GT-STD-005)" style="flex: 1;">
-                        <input type="text" id="tName" placeholder="标准订单名称 (如 典型三轴机床配置单 v1.0)" style="flex: 1;">
+                        <input type="text" id="tNo" placeholder="基准单号 (未输入则自动生成)" style="flex: 1;">
+                        <input type="text" id="tName" placeholder="数控系统类型 (如 西门子840Dsl)" style="flex: 1;">
                         <input type="text" id="tErp" placeholder="ERP (申请后填写)" style="flex: 1;">
                     </div>
 
@@ -297,7 +302,12 @@
                 </div>
                 <div class="card-container">
                     <div class="section-title">现有标准订单库列表</div>
-                    <table id="tplTable"><thead><tr><th>基准单号</th><th>标准单名称</th><th>结构明细</th><th>操作</th></tr></thead><tbody></tbody></table>
+                    <table id="tplTable"><thead><tr><th>基准单号</th><th>数控系统类型</th><th>结构明细</th><th>操作</th></tr></thead><tbody></tbody></table>
+                    <div class="pagination">
+                        <button class="btn btn-outline btn-sm" id="btnPrevTplList" onclick="prevTplListPage()">上一页</button>
+                        <span class="page-info" id="tplListPageInfo">第 1 / 1 页</span>
+                        <button class="btn btn-outline btn-sm" id="btnNextTplList" onclick="nextTplListPage()">下一页</button>
+                    </div>
                 </div>
             </div>
 
@@ -347,6 +357,11 @@
                         <thead><tr><th>部件型号</th><th>分类</th><th>制造商</th><th width="30%">备注说明</th><th>状态</th><th>操作</th></tr></thead>
                         <tbody></tbody>
                     </table>
+                    <div class="pagination">
+                        <button class="btn btn-outline btn-sm" id="btnPrevLib" onclick="prevLibPage()">上一页</button>
+                        <span class="page-info" id="libPageInfo">第 1 / 1 页</span>
+                        <button class="btn btn-outline btn-sm" id="btnNextLib" onclick="nextLibPage()">下一页</button>
+                    </div>
                 </div>
             </div>
 
@@ -435,12 +450,15 @@
     </div>
     <script>
         const CORE_CATS = ["电机"];
-        // 🔪 彻底覆写浏览器的原生 alert 函数
         window.alert = function(msg) {
             document.getElementById('alertMessage').innerText = msg;
             document.getElementById('alertModal').classList.add('active');
         };
-        let globalTplData = [], globalOrdersData = [];
+        
+        let globalTplData = [], globalOrdersData = [], globalLibData = [];
+        let tplListCurrentPage = 1, tplListPageSize = 10; // 标准库列表分页参数
+        let orderCurrentPage = 1, orderPageSize = 6;  // 订单卡片流分页参数
+        let libCurrentPage = 1, libPageSize = 10;     // 部件列表分页参数
 
         // 保存真实登录用户的状态
         let currentUser = null;
@@ -504,15 +522,15 @@
             document.getElementById('pageTitle').innerText = el.innerText.replace(/[\n\r]+|[\s]{2,}/g, ' ').trim();
 
             if(id === 'dashboard') { loadStats(); loadDashTpl(); }
-            if(id === 'orders') loadOrders();
-            if(id === 'templates') loadTemplatePage();
-            if(id === 'library') loadLib();
+            if(id === 'orders') { orderCurrentPage = 1; loadOrders(); }
+            if(id === 'templates') { tplListCurrentPage = 1; loadTemplatePage(); }
+            if(id === 'library') { libCurrentPage = 1; loadLib(); }
             if(id === 'audit') loadAudit();
             if(id === 'users') loadUsers();
             if(id === 'feedback') loadFeedback();
         }
 
-        // [新增修复] 获取统计数据时发送当前用户信息
+        // 获取统计数据时发送当前用户信息
         async function loadStats() {
             const url = `/api/stats?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}`;
             const d = await(await fetch(url)).json();
@@ -522,22 +540,22 @@
             document.getElementById('st-pen').innerText = d.pending;
         }
 
-        let tplCurrentPage = 1;
-        const tplPageSize = 4;
+        let dashTplCurrentPage = 1;
+        const dashTplPageSize = 4;
         async function loadDashTpl() {
             const res = await fetch('/api/templates');
             globalTplData = await res.json();
-            tplCurrentPage = 1;
+            dashTplCurrentPage = 1;
             renderDashTplPage();
         }
 
         function renderDashTplPage() {
-            const totalPages = Math.ceil(globalTplData.length / tplPageSize) || 1;
-            document.getElementById('pageInfo').innerText = `第 ${tplCurrentPage} / ${totalPages} 页`;
-            document.getElementById('btnPrev').disabled = tplCurrentPage === 1;
-            document.getElementById('btnNext').disabled = tplCurrentPage === totalPages;
+            const totalPages = Math.ceil(globalTplData.length / dashTplPageSize) || 1;
+            document.getElementById('pageInfo').innerText = `第 ${dashTplCurrentPage} / ${totalPages} 页`;
+            document.getElementById('btnPrev').disabled = dashTplCurrentPage === 1;
+            document.getElementById('btnNext').disabled = dashTplCurrentPage === totalPages;
 
-            const pageData = globalTplData.slice((tplCurrentPage - 1) * tplPageSize, tplCurrentPage * tplPageSize);
+            const pageData = globalTplData.slice((dashTplCurrentPage - 1) * dashTplPageSize, dashTplCurrentPage * dashTplPageSize);
             const tbody = document.querySelector('#dashTplTable tbody');
             tbody.innerHTML = '';
             pageData.forEach(t => {
@@ -549,8 +567,8 @@
                 tbody.innerHTML += `<tr><td style="font-weight:bold; color:var(--gt-text-main);">${t.name}</td><td><span class="badge badge-blue">电机配置: ${coreCount} 项</span> <span class="badge badge-green">其他部件: ${otherCount} 项</span></td><td><a href="javascript:void(0)" onclick="showTplDetails(${t.id})" style="color:var(--gt-accent); text-decoration:none;">查看明细</a></td></tr>`;
             });
         }
-        function prevPage() { if(tplCurrentPage > 1) { tplCurrentPage--; renderDashTplPage(); } }
-        function nextPage() { if(tplCurrentPage < Math.ceil(globalTplData.length / tplPageSize)) { tplCurrentPage++; renderDashTplPage(); } }
+        function prevPage() { if(dashTplCurrentPage > 1) { dashTplCurrentPage--; renderDashTplPage(); } }
+        function nextPage() { if(dashTplCurrentPage < Math.ceil(globalTplData.length / dashTplPageSize)) { dashTplCurrentPage++; renderDashTplPage(); } }
 
         function showTplDetails(id) {
             const t = globalTplData.find(x => x.id === id);
@@ -583,102 +601,114 @@
         }
 
         // --- 订单管理工作流 ---
-        // [修改] 新增明细行也自带数量输入框
         function addOrderCompRow() {
             const tr = document.createElement('tr');
             tr.innerHTML = `<td><select class="o-c" onchange="this.closest('tr').querySelector('.o-m').setAttribute('list', 'dl-' + this.value); this.closest('tr').querySelector('.o-m').value='';"><option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他" selected>其他</option></select></td><td><input type="text" class="o-m" list="dl-其他" placeholder="双击下拉或输入关键词筛选型号" style="width:100%;"></td><td><input type="number" class="o-qty" min="1" value="1" style="width:100%;"></td><td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>`;
             document.querySelector('#oCompTable tbody').appendChild(tr);
         }
 
-        // [新增修复] 订单列表：隔离、搜索、删除
         async function loadOrders() {
-    if (!document.getElementById('dl-container')) {
-        const comps = await(await fetch('/api/components?status=已发布')).json();
-        let dlContainer = document.createElement('div'); dlContainer.id = 'dl-container'; document.body.appendChild(dlContainer);
-        const cats = ["电机", "驱动", "系统", "操作部件", "电缆", "服务", "手册", "网络 / 连接配件", "电气安装辅件", "软件 / 功能授权", "其他"];
-        cats.forEach(cat => {
-            const dl = document.createElement('datalist'); dl.id = 'dl-' + cat;
-            comps.filter(c => c.category === cat).forEach(c => { dl.innerHTML += `<option value="${c.model}"></option>`; });
-            dlContainer.appendChild(dl);
-        });
-    }
+            if (!document.getElementById('dl-container')) {
+                const comps = await(await fetch('/api/components?status=已发布')).json();
+                let dlContainer = document.createElement('div'); dlContainer.id = 'dl-container'; document.body.appendChild(dlContainer);
+                const cats = ["电机", "驱动", "系统", "操作部件", "电缆", "服务", "手册", "网络 / 连接配件", "电气安装辅件", "软件 / 功能授权", "其他"];
+                cats.forEach(cat => {
+                    const dl = document.createElement('datalist'); dl.id = 'dl-' + cat;
+                    comps.filter(c => c.category === cat).forEach(c => { dl.innerHTML += `<option value="${c.model}"></option>`; });
+                    dlContainer.appendChild(dl);
+                });
+            }
 
-    const searchVal = document.getElementById('orderSearch').value.trim();
-    const url = `/api/orders?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}&search=${encodeURIComponent(searchVal)}`;
+            const searchVal = document.getElementById('orderSearch').value.trim();
+            const url = `/api/orders?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}&search=${encodeURIComponent(searchVal)}`;
 
-    const orders = await(await fetch(url)).json();
-    globalOrdersData = orders;
-    const grid = document.getElementById('orderGrid'); grid.innerHTML = '';
-
-    if (orders.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:40px; color:var(--gt-text-sub); background:#fafafa; border:1px dashed #d9d9d9; border-radius:6px;">暂无可见的订单数据</div>`;
-        return;
-    }
-
-    orders.forEach(o => {
-        let matchText = o.matched_template;
-        if(o.match_score >= 0.1) matchText = `${o.matched_template} <span style="font-size:0.8rem; color:var(--gt-text-sub); margin-left:6px;">(${(o.match_score*100).toFixed(1)}%)</span>`;
-
-        // 状态视觉呈现
-        let badgeCls = 'badge-blue';
-        if(o.status === '待采购') badgeCls = 'badge-orange';
-        if(o.status === '已驳回') badgeCls = 'badge-red';
-        if(o.status === '已完成') badgeCls = 'badge-green';
-        if(o.status === '待定基准') badgeCls = 'badge-purple'; // [新增：待定基准使用紫色标签]
-
-        // 动作按钮生成(依赖用户当前角色)
-        let actionHtml = `<button class="btn btn-outline btn-sm" onclick="showOrderDetails(${o.id})">📄订单详情</button>`;
-
-        // [新增：处理待定基准状态] 只有超级管理员能操作
-        if (o.status === '待定基准' && currentRole === '超级管理员') {
-            actionHtml += `<button class="btn btn-success btn-sm" style="background:#722ed1; border-color:#722ed1;" onclick="doOrderWorkflow(${o.id}, 'set_baseline')">🎯 建立基准</button>`;
-            actionHtml += `<button class="btn btn-outline btn-sm" onclick="doOrderWorkflow(${o.id}, 'skip_baseline')">➡️ 特批流转</button>`;
-            actionHtml += `<button class="btn btn-danger btn-sm" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回</button>`;
+            globalOrdersData = await(await fetch(url)).json();
+            orderCurrentPage = 1; // 每次重新搜索重置为第一页
+            renderOrderPage();
         }
 
-        if (o.status === '待审批' && (currentRole === '标准管理员' || currentRole === '超级管理员')) {
-            actionHtml += `<button class="btn btn-success btn-sm" onclick="doOrderWorkflow(${o.id}, 'approve')">✔️ 通过审批 </button>`;
-            actionHtml += `<button class="btn btn-danger btn-sm" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回订单</button>`;
-        }
-        if (o.status === '待采购' && (currentRole === '采购员' || currentRole === '超级管理员')) {
-            actionHtml += `<button class="btn btn-primary btn-sm" onclick="doOrderWorkflow(${o.id}, 'complete')">📦 采购已完成</button>`;
-        }
+        // [新增] 渲染订单卡片分页
+        function renderOrderPage() {
+            const grid = document.getElementById('orderGrid'); 
+            grid.innerHTML = '';
 
-        if (currentRole === '超级管理员') {
-            actionHtml += `<button class="btn btn-danger btn-sm" style="background:#fff1f0; color:#f5222d; border-color:#ffa39e;" onclick="deleteOrder(${o.id})">🗑️ 删除</button>`;
+            if (globalOrdersData.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:40px; color:var(--gt-text-sub); background:#fafafa; border:1px dashed #d9d9d9; border-radius:6px;">暂无可见的订单数据</div>`;
+                document.getElementById('orderPageInfo').innerText = `第 1 / 1 页`;
+                document.getElementById('btnPrevOrder').disabled = true;
+                document.getElementById('btnNextOrder').disabled = true;
+                return;
+            }
+
+            const totalPages = Math.ceil(globalOrdersData.length / orderPageSize) || 1;
+            document.getElementById('orderPageInfo').innerText = `第 ${orderCurrentPage} / ${totalPages} 页`;
+            document.getElementById('btnPrevOrder').disabled = orderCurrentPage === 1;
+            document.getElementById('btnNextOrder').disabled = orderCurrentPage === totalPages;
+
+            const pageData = globalOrdersData.slice((orderCurrentPage - 1) * orderPageSize, orderCurrentPage * orderPageSize);
+
+            pageData.forEach(o => {
+                let matchText = o.matched_template;
+                if(o.match_score >= 0.1) matchText = `${o.matched_template} <span style="font-size:0.8rem; color:var(--gt-text-sub); margin-left:6px;">(${(o.match_score*100).toFixed(1)}%)</span>`;
+
+                let badgeCls = 'badge-blue';
+                if(o.status === '待采购') badgeCls = 'badge-orange';
+                if(o.status === '已驳回') badgeCls = 'badge-red';
+                if(o.status === '已完成') badgeCls = 'badge-green';
+                if(o.status === '待定基准') badgeCls = 'badge-purple'; 
+
+                let actionHtml = `<button class="btn btn-outline btn-sm" onclick="showOrderDetails(${o.id})">📄订单详情</button>`;
+
+                if (o.status === '待定基准' && currentRole === '超级管理员') {
+                    actionHtml += `<button class="btn btn-success btn-sm" style="background:#722ed1; border-color:#722ed1;" onclick="doOrderWorkflow(${o.id}, 'set_baseline')">🎯 建立基准</button>`;
+                    actionHtml += `<button class="btn btn-outline btn-sm" onclick="doOrderWorkflow(${o.id}, 'skip_baseline')">➡️ 特批流转</button>`;
+                    actionHtml += `<button class="btn btn-danger btn-sm" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回</button>`;
+                }
+
+                if (o.status === '待审批' && (currentRole === '标准管理员' || currentRole === '超级管理员')) {
+                    actionHtml += `<button class="btn btn-success btn-sm" onclick="doOrderWorkflow(${o.id}, 'approve')">✔️ 通过审批 </button>`;
+                    actionHtml += `<button class="btn btn-danger btn-sm" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回订单</button>`;
+                }
+                if (o.status === '待采购' && (currentRole === '采购员' || currentRole === '超级管理员')) {
+                    actionHtml += `<button class="btn btn-primary btn-sm" onclick="doOrderWorkflow(${o.id}, 'complete')">📦 采购已完成</button>`;
+                }
+
+                if (currentRole === '超级管理员') {
+                    actionHtml += `<button class="btn btn-danger btn-sm" style="background:#fff1f0; color:#f5222d; border-color:#ffa39e;" onclick="deleteOrder(${o.id})">🗑️ 删除</button>`;
+                }
+
+                let msgHtml = '';
+                if(o.status === '已驳回' && o.reject_reason) {
+                    msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border);"><div class="label" style="color:var(--danger);">驳回原因</div><div class="val" style="color:var(--danger); white-space:normal; font-size:0.85rem;">${o.reject_reason}</div></div>`;
+                } else if (o.status !== '待审批' && o.status !== '已驳回' && o.status !== '待定基准' && o.approve_remark) {
+                    msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border);"><div class="label" style="color:var(--success);">审批备注</div><div class="val" style="color:var(--success); white-space:normal; font-size:0.85rem;">${o.approve_remark}</div></div>`;
+                }
+
+                grid.innerHTML += `
+                    <div class="order-card">
+                        <div class="order-card-header">
+                            <div style="font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+                                <span>${o.order_no}</span>
+                                <span class="badge ${badgeCls}">${o.status}</span>
+                            </div>
+                            <span class="order-badge-manuf" title="${o.manufacturer || '未知'}">${o.manufacturer || '未知'}</span>
+                        </div>
+                        <div class="order-card-body">
+                            <div class="order-row"><div class="label">建单人员</div><div class="val">${o.applicant || '-'}</div></div>
+                            <div class="order-row"><div class="label">适用机床</div><div class="val blue">${o.applicable_machine}</div></div>
+                            <div class="order-row"><div class="label">系统系列</div><div class="val">${o.series}</div></div>
+                            <div class="order-row"><div class="label">电机数量</div><div class="val">${o.motor_count}</div></div>
+                            <div class="order-row"><div class="label">基准匹配</div><div class="val blue" title="${o.matched_template}">${matchText}</div></div>
+                            ${msgHtml}
+                        </div>
+                        <div class="order-actions">${actionHtml}</div>
+                    </div>`;
+            });
         }
+        function prevOrderPage() { if(orderCurrentPage > 1) { orderCurrentPage--; renderOrderPage(); } }
+        function nextOrderPage() { if(orderCurrentPage < Math.ceil(globalOrdersData.length / orderPageSize)) { orderCurrentPage++; renderOrderPage(); } }
 
-        // 呈现驳回原因与通过备注
-        let msgHtml = '';
-        if(o.status === '已驳回' && o.reject_reason) {
-            msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border);"><div class="label" style="color:var(--danger);">驳回原因</div><div class="val" style="color:var(--danger); white-space:normal; font-size:0.85rem;">${o.reject_reason}</div></div>`;
-        } else if (o.status !== '待审批' && o.status !== '已驳回' && o.status !== '待定基准' && o.approve_remark) {
-            msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border);"><div class="label" style="color:var(--success);">审批备注</div><div class="val" style="color:var(--success); white-space:normal; font-size:0.85rem;">${o.approve_remark}</div></div>`;
-        }
 
-        grid.innerHTML += `
-            <div class="order-card">
-                <div class="order-card-header">
-                    <div style="font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-                        <span>${o.order_no}</span>
-                        <span class="badge ${badgeCls}">${o.status}</span>
-                    </div>
-                    <span class="order-badge-manuf" title="${o.manufacturer || '未知'}">${o.manufacturer || '未知'}</span>
-                </div>
-                <div class="order-card-body">
-                    <div class="order-row"><div class="label">建单人员</div><div class="val">${o.applicant || '-'}</div></div>
-                    <div class="order-row"><div class="label">适用机床</div><div class="val blue">${o.applicable_machine}</div></div>
-                    <div class="order-row"><div class="label">系统系列</div><div class="val">${o.series}</div></div>
-                    <div class="order-row"><div class="label">电机数量</div><div class="val">${o.motor_count}</div></div>
-                    <div class="order-row"><div class="label">基准匹配</div><div class="val blue" title="${o.matched_template}">${matchText}</div></div>
-                    ${msgHtml}
-                </div>
-                <div class="order-actions">${actionHtml}</div>
-            </div>`;
-    });
-}
-
-        // --- 核心升级：自定义 UI 弹窗工作流 ---
         let currentWorkflowAction = null;
         let currentWorkflowOrderId = null;
 
@@ -686,9 +716,7 @@
             document.getElementById('customPromptModal').classList.remove('active');
         }
 
-        // 统一控制弹窗的展现 (消灭所有原生弹窗)
         async function doOrderWorkflow(id, action) {
-            // 每次弹窗前，确保输入框是可见的
             document.getElementById('cpInput').style.display = 'block';
 
             if (action === 'reject') {
@@ -710,10 +738,9 @@
                 document.getElementById('cpInput').focus();
             }
             else if (action === 'complete') {
-                // [修复点] 使用自定义弹窗代替原生的 confirm
                 document.getElementById('cpTitle').innerHTML = '📦 采购完结确认';
                 document.getElementById('cpMessage').innerText = '确认已完成所有采购入库核销流程？(此操作不可逆)';
-                document.getElementById('cpInput').style.display = 'none'; // 仅仅确认，不需要输入内容，把框藏起来
+                document.getElementById('cpInput').style.display = 'none'; 
                 currentWorkflowAction = 'complete';
                 currentWorkflowOrderId = id;
                 document.getElementById('customPromptModal').classList.add('active');
@@ -738,7 +765,6 @@
             }
         }
 
-        // 绑定自定义弹窗的“确认”按钮事件
         document.getElementById('cpConfirmBtn').onclick = async function() {
             const val = document.getElementById('cpInput').value.trim();
             let payload = { id: currentWorkflowOrderId, action: currentWorkflowAction };
@@ -750,10 +776,8 @@
                 payload.remark = val;
             }
 
-            // 关闭弹窗并发送请求
             closeCustomPrompt();
 
-            // 为了防止按钮连击，可以在这里加个 loading 状态，目前直接 fetch
             await fetch('/api/orders/workflow', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             loadOrders(); loadStats();
         };
@@ -762,9 +786,8 @@
             const o = globalOrdersData.find(x => x.id === id);
             if(!o) return;
 
-            // ================= 1. 计算进度条状态 =================
             let s1 = 'completed', s2 = '', s3 = '', s4 = '';
-            let i2 = '2', i3 = '3', i4 = '4'; // 默认图标
+            let i2 = '2', i3 = '3', i4 = '4'; 
 
             if (o.status === '待审批' || o.status === '待定基准') {
                 s2 = 'active';
@@ -788,10 +811,8 @@
                 </div>
             `;
 
-            // ================= 2. 构建明细表格与差异分析 =================
             let compHtml = '';
             if(o.components && o.components.length > 0) {
-                // [修改] 明细表格增加对数量的格式化显示
                 const formatArr = (arr) => {
                     const cnt = {}; arr.forEach(i => cnt[i.model] = {cat: i.category, q: (cnt[i.model]?.q||0)+1});
                     return Object.entries(cnt).map(([k,v]) => `<tr><td><span class="badge ${CORE_CATS.includes(v.cat)?'badge-blue':'badge-green'}">${v.cat}</span></td><td style="font-weight:bold;">${k} ${v.q>1 ? `<span style="color:var(--gt-accent); font-weight:bold;">(×${v.q})</span>` : ''}</td></tr>`).join('');
@@ -812,7 +833,6 @@
                 diffHtml = `<div style="font-weight:bold; border-bottom:2px solid var(--gt-border); padding-bottom:8px; margin-bottom:10px; color:var(--gt-accent);">🎯 智能对比：与基准单【${o.matched_template}】差异分析</div><div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;"><div style="background:#f6ffed; border:1px solid #b7eb8f; padding:15px; border-radius:6px;"><strong style="color:var(--success);">[➕ 需在基准上新增配置]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${addsStr}</div></div><div style="background:#fff1f0; border:1px solid #ffccc7; padding:15px; border-radius:6px;"><strong style="color:var(--danger);">[➖ 需从基准中剔除冗余]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${rmsStr}</div></div></div>`;
             } else { diffHtml = `<div style="margin-top:20px; padding:15px; background:#fff1f0; border:1px solid #ffccc7; border-radius:6px; color:var(--danger); font-weight:bold; text-align:center;">⚠️ 本单录入的明细与现有所有基准差异过大，无匹配参考，建议纳入新定制单。</div>`; }
 
-            // ================= 3. 拼接并弹窗 =================
             let html = `
                 ${progressHtml}
                 <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:6px; font-size:0.9rem;"><div><span style="color:var(--gt-text-sub)">订单号：</span> <strong>${o.order_no}</strong></div><div><span style="color:var(--gt-text-sub)">制造商：</span> ${o.manufacturer}</div><div><span style="color:var(--gt-text-sub)">当前状态：</span> <strong style="color:var(--gt-accent)">${o.status}</strong></div><div><span style="color:var(--gt-text-sub)">系统系列：</span> ${o.series}</div><div><span style="color:var(--gt-text-sub)">适用机床：</span> ${o.applicable_machine}</div><div><span style="color:var(--gt-text-sub)">创建时间：</span> ${o.created_at}</div></div>
@@ -825,20 +845,15 @@
         }
 
         async function submitOrder() {
-            // 1. 提取上方三个必填输入框的值并去掉首尾空格
             const man = document.getElementById('oMan').value.trim();
             const ser = document.getElementById('oSer').value.trim();
             const mac = document.getElementById('oMac').value.trim();
-            // (已删除：兼容读取您刚加的电机数量输入框)
 
-            // ⛔ 拦截校验 1：基础信息必须填写完整
             if (!man || !ser || !mac) {
                 return alert("⚠️ 提交失败：请将【制造商】、【系统系列】和【适用机床】填写完整！");
             }
 
-            // 2. 收集下方表格录入的部件
             const comps = [];
-            // [修改] 处理数量，将数量转化为多条相同的记录存入后端
             document.querySelectorAll('#oCompTable tbody tr').forEach(tr => {
                 const mod = tr.querySelector('.o-m').value.trim();
                 const qtyInput = tr.querySelector('.o-qty');
@@ -850,13 +865,10 @@
                 }
             });
 
-            // ⛔ 拦截校验 2：至少需要一条有效的部件明细
             if (comps.length === 0) {
                 return alert("⚠️ 提交失败：订单不能是空壳，请至少录入一项有效的【部件明细】！");
             }
 
-            // ==============================================================================
-            // [新增核心拦截] ⛔ 拦截校验 3：检查填写的部件是否真的是合法的已入库部件
             const publishedComps = await (await fetch('/api/components?status=已发布')).json();
             const validModels = publishedComps.map(c => c.model);
 
@@ -865,47 +877,38 @@
                     return alert(`⚠️ 提交失败：系统库中不存在部件【${c.model}】！\n\n请先前往“数控部件列表”中手动添加该部件，并在审核发布后再来建单。`);
                 }
             }
-            // ==============================================================================
 
-            // 【核心优化】：自动计算电机数量，拒绝手工死板录入
             const autoMotCount = comps.filter(c => c.category === '电机').length;
 
-            // [新增修复] 校验全过，组装数据发给后端，包含建单人
             const payload = {
                 manufacturer: man,
                 series: ser,
-                motor_count: autoMotCount, // <--- 使用 JS 自动统计出的数量
+                motor_count: autoMotCount, 
                 drive_count: comps.filter(c => c.category === '驱动').length,
                 applicable_machine: mac,
-                applicant: currentUser, // 记录建单人
+                applicant: currentUser, 
                 components: comps
             };
 
             await fetch('/api/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
 
-            // 提交成功后，清空建单区域的数据，恢复初始状态
             document.querySelectorAll('#oCompTable tbody tr').forEach((tr, i) => {
                 if(i > 0) tr.remove();
                 else {
                     tr.querySelector('.o-m').value = '';
-                    // [修改] 提交后重置数量为 1
                     tr.querySelector('.o-qty').value = '1';
                 }
             });
             document.getElementById('oMan').value = '';
             document.getElementById('oSer').value = '';
             document.getElementById('oMac').value = '';
-            // (已删除：清空重置电机数量输入框的逻辑)
 
-            // 刷新列表
             loadOrders();
             loadStats();
 
-            // 触发成功的 UI 弹窗
             alert("✅ 订单提交成功！已流转至【标准管理员】进行审批。");
         }
 
-        // [新增] 超级管理员删除订单
         async function deleteOrder(id) {
             if (!confirm("⚠️ 确定要彻底删除该订单吗？此操作不可撤销！")) return;
             try {
@@ -925,10 +928,6 @@
 
       // --- 核心升级：标准库管理与智能输入 ---
 
-        let globalPublishedComps = [];
-        let currentEditTplId = null; // [新增] 用于记录当前正在修改哪个标准单
-
-        // [修改] 增加默认参数支持，方便回显编辑数据，支持数量
         function addTplCompRow(defaultCat = '其他', defaultMod = '', defaultQty = 1) {
             const tr = document.createElement('tr');
             const cats = ["电机", "驱动", "系统", "操作部件", "电缆", "服务", "手册", "网络 / 连接配件", "电气安装辅件", "软件 / 功能授权", "其他"];
@@ -951,34 +950,27 @@
             document.querySelector('#tCompTable tbody').appendChild(tr);
         }
 
-        // 智能联想核心逻辑
         function showSuggestions(inputEl) {
             const val = inputEl.value.trim().toLowerCase();
             const listEl = inputEl.nextElementSibling;
-            const cat = inputEl.closest('tr').querySelector('.t-c').value; // 获取当前行选中的分类
+            const cat = inputEl.closest('tr').querySelector('.t-c').value; 
 
-            // 如果缓存为空，说明还没加载，直接跳过
             if (globalPublishedComps.length === 0) return;
 
-            // 过滤数据：必须符合当前分类，并且型号中包含输入的关键字
             let matches = globalPublishedComps.filter(c =>
                 c.category === cat && c.model.toLowerCase().includes(val)
             );
 
-            // 如果没有匹配项或者输入框失焦且没输入内容，就隐藏列表
             if (matches.length === 0) {
                 listEl.style.display = 'none';
                 return;
             }
 
-            // 生成列表 HTML
             listEl.innerHTML = '';
             matches.forEach(m => {
                 const item = document.createElement('div');
                 item.className = 'autocomplete-item';
-                // 高亮匹配部分（简单的文本替换展示，不破坏原数据）
                 item.innerHTML = `${m.model} <span>(${m.remark || '无备注'})</span>`;
-                // 点击下拉项时，填入输入框，并隐藏下拉列表
                 item.onclick = function() {
                     inputEl.value = m.model;
                     listEl.style.display = 'none';
@@ -988,7 +980,6 @@
             listEl.style.display = 'block';
         }
 
-        // 点击页面其他地方时隐藏所有下拉列表
         document.addEventListener('click', function(e) {
             if (!e.target.classList.contains('t-m')) {
                 document.querySelectorAll('.autocomplete-list').forEach(l => l.style.display = 'none');
@@ -996,30 +987,47 @@
         });
 
         async function loadTemplatePage() {
-            // 每次进入页面，预加载所有已发布的部件，存到全局变量里供联想使用
             globalPublishedComps = await(await fetch('/api/components?status=已发布')).json();
-
-            // 获取并渲染现有的标准库列表
             const res = await fetch('/api/templates');
             globalTplData = await res.json();
-            const b = document.querySelector('#tplTable tbody');
-            b.innerHTML = '';
+            tplListCurrentPage = 1;
+            renderTplListPage();
+        }
 
-            globalTplData.forEach(t => {
+        // [新增] 渲染标准库列表分页
+        function renderTplListPage() {
+            const tbody = document.querySelector('#tplTable tbody');
+            tbody.innerHTML = '';
+
+            if (globalTplData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--gt-text-sub); padding:20px;">暂无标准库数据</td></tr>`;
+                document.getElementById('tplListPageInfo').innerText = `第 1 / 1 页`;
+                document.getElementById('btnPrevTplList').disabled = true;
+                document.getElementById('btnNextTplList').disabled = true;
+                return;
+            }
+
+            const totalPages = Math.ceil(globalTplData.length / tplListPageSize) || 1;
+            document.getElementById('tplListPageInfo').innerText = `第 ${tplListCurrentPage} / ${totalPages} 页`;
+            document.getElementById('btnPrevTplList').disabled = tplListCurrentPage === 1;
+            document.getElementById('btnNextTplList').disabled = tplListCurrentPage === totalPages;
+
+            const pageData = globalTplData.slice((tplListCurrentPage - 1) * tplListPageSize, tplListCurrentPage * tplListPageSize);
+
+            pageData.forEach(t => {
                 let coreCount = 0, otherCount = 0;
                 Object.keys(t.data).forEach(k => {
                     if(CORE_CATS.includes(k)) coreCount += (t.data[k] || []).length;
                     else otherCount += (t.data[k] || []).length;
                 });
 
-                // [新增] 只有超级管理员才有编辑修改权
                 let actionHtml = `<button class="btn btn-outline btn-sm" onclick="showTplDetails(${t.id})">详情</button>`;
                 if (currentRole === '超级管理员') {
                     actionHtml += ` <button class="btn btn-primary btn-sm" onclick="editTpl(${t.id})">✏️ 编辑</button>`;
                     actionHtml += ` <button class="btn btn-danger btn-sm" onclick="delT(${t.id})">删除</button>`;
                 }
 
-                b.innerHTML += `<tr>
+                tbody.innerHTML += `<tr>
                     <td style="color:var(--gt-text-sub);">${t.no}</td>
                     <td style="font-weight:bold; color:var(--gt-text-main);">${t.name}</td>
                     <td>
@@ -1030,8 +1038,9 @@
                 </tr>`;
             });
         }
+        function prevTplListPage() { if(tplListCurrentPage > 1) { tplListCurrentPage--; renderTplListPage(); } }
+        function nextTplListPage() { if(tplListCurrentPage < Math.ceil(globalTplData.length / tplListPageSize)) { tplListCurrentPage++; renderTplListPage(); } }
 
-        // [新增] 点击编辑按钮，将数据回显到上方的表单中
         function editTpl(id) {
             const t = globalTplData.find(x => x.id === id);
             if(!t) return;
@@ -1040,7 +1049,6 @@
             document.getElementById('tNo').value = t.no;
             document.getElementById('tName').value = t.name;
             document.getElementById('tErp').value = t.erp_code || '';
-            // (已删除：赋值给 tMot 的逻辑)
 
             const btn = document.getElementById('saveTplBtn');
             btn.innerHTML = '💾 保存基准修改';
@@ -1050,7 +1058,6 @@
             let hasData = false;
             Object.keys(t.data).forEach(cat => {
                 if(t.data[cat] && t.data[cat].length > 0) {
-                    // [修改] 利用数量机制，将相同的型号合并后回显数量
                     const counts = {};
                     t.data[cat].forEach(mod => counts[mod] = (counts[mod] || 0) + 1);
                     Object.entries(counts).forEach(([mod, qty]) => {
@@ -1067,10 +1074,10 @@
        async function saveTemplate() {
             const name = document.getElementById('tName').value.trim();
             const no = document.getElementById('tNo').value.trim();
-            const erp = document.getElementById('tErp').value.trim(); // [新增] 获取 ERP
+            const erp = document.getElementById('tErp').value.trim(); 
 
-            if(!name || !no) {
-                document.getElementById('alertMessage').innerText = '⚠️ 请输入基准单号和标准订单名称！';
+            if(!name) { 
+                document.getElementById('alertMessage').innerText = '⚠️ 请输入数控系统类型！系统将据此自动生成编号。';
                 document.getElementById('alertModal').classList.add('active');
                 return;
             }
@@ -1080,7 +1087,6 @@
                 "服务": [], "手册": [], "网络 / 连接配件": [], "电气安装辅件": [], "软件 / 功能授权": [], "其他": []
             };
 
-            // [修改] 保存时也根据填写的数量添加多次
             document.querySelectorAll('#tCompTable tbody tr').forEach(tr => {
                 const cat = tr.querySelector('.t-c').value;
                 const mod = tr.querySelector('.t-m').value.trim();
@@ -1094,7 +1100,6 @@
                 }
             });
 
-            // [新增核心拦截] ⛔ 检查填写的部件是否真的是合法的已入库部件
             const publishedComps = await (await fetch('/api/components?status=已发布')).json();
             const validModels = publishedComps.map(c => c.model);
             const allEnteredModels = Object.values(comps).flat();
@@ -1105,16 +1110,14 @@
                 }
             }
 
-            // 【核心优化】：自动计算电机分类下的数量
             const autoMotCount = comps["电机"].length;
 
-            // [修改] 发送带 ID 的请求，使用自动计算的电机数
             const payload = {
                 id: currentEditTplId,
                 no: no,
                 name: name,
-                erp_code: erp, // [新增] 将 ERP 发给后端
-                motor_count: autoMotCount, // <--- 自动计算
+                erp_code: erp, 
+                motor_count: autoMotCount, 
                 components: comps
             };
 
@@ -1124,21 +1127,19 @@
             if (data.status === 'error') return alert("❌ 保存失败：" + data.message);
             alert("✅ " + data.message);
 
-            // 清空表格与状态恢复
             currentEditTplId = null;
             const btn = document.getElementById('saveTplBtn');
             btn.innerHTML = '✔️ 保存并加入标准订单库';
             btn.className = 'btn btn-primary';
 
-            // 清空输入框
             document.getElementById('tName').value = '';
             document.getElementById('tNo').value = '';
-            document.getElementById('tErp').value = ''; // [新增] 清空 ERP
+            document.getElementById('tErp').value = ''; 
             document.querySelectorAll('#tCompTable tbody tr').forEach((tr, i) => {
                 if(i>0) tr.remove();
                 else {
                     tr.querySelector('.t-m').value='';
-                    tr.querySelector('.t-qty').value='1'; // 重置数量
+                    tr.querySelector('.t-qty').value='1'; 
                 }
             });
 
@@ -1165,11 +1166,10 @@
         async function submitApply() {
             const cat = document.getElementById('lCat').value;
             const mod = document.getElementById('lMod').value.trim();
-            const man = document.getElementById('lMan').value.trim(); // 接收制造商
+            const man = document.getElementById('lMan').value.trim(); 
             const erp = document.getElementById('lErp').value.trim();
             const rem = document.getElementById('lRem').value.trim();
 
-            // ⛔ 拦截校验：型号绝对不能为空
             if (!mod) {
                 return alert("⚠️ 提交失败：必须填写【部件型号】！");
             }
@@ -1184,12 +1184,10 @@
                 });
                 const data = await res.json();
 
-                // ⛔ 如果后端返回错误（比如型号重复了），弹出拦截提示
                 if (data.status === 'error') {
                     return alert("❌ 提交失败：" + data.message);
                 }
 
-                // 提交成功，清空输入框并刷新列表
                 alert("✅ " + data.message);
                 document.getElementById('lMod').value = '';
                 document.getElementById('lMan').value = '';
@@ -1209,24 +1207,40 @@
             let url = '/api/components?';
             const cat = document.getElementById('searchCat').value;
             const mod = document.getElementById('searchMod').value.trim();
-            const man = document.getElementById('searchMan').value.trim(); // 获取搜索制造商
+            const man = document.getElementById('searchMan').value.trim(); 
             
             if (cat !== '全部') url += `category=${encodeURIComponent(cat)}&`;
             if (mod !== '') url += `model=${encodeURIComponent(mod)}&`;
             if (man !== '') url += `manufacturer=${encodeURIComponent(man)}`;
 
-            const b = document.querySelector('#libTable tbody'); b.innerHTML = '';
-            const comps = await(await fetch(url)).json();
+            globalLibData = await(await fetch(url)).json();
+            libCurrentPage = 1;
+            renderLibPage();
+        }
 
-            if(comps.length === 0) {
+        // [新增] 渲染部件列表分页
+        function renderLibPage() {
+            const b = document.querySelector('#libTable tbody'); 
+            b.innerHTML = '';
+
+            if(globalLibData.length === 0) {
                 b.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--gt-text-sub); padding:20px;">没有找到符合条件的部件数据</td></tr>`;
+                document.getElementById('libPageInfo').innerText = `第 1 / 1 页`;
+                document.getElementById('btnPrevLib').disabled = true;
+                document.getElementById('btnNextLib').disabled = true;
                 return;
             }
 
-            comps.forEach(c => {
+            const totalPages = Math.ceil(globalLibData.length / libPageSize) || 1;
+            document.getElementById('libPageInfo').innerText = `第 ${libCurrentPage} / ${totalPages} 页`;
+            document.getElementById('btnPrevLib').disabled = libCurrentPage === 1;
+            document.getElementById('btnNextLib').disabled = libCurrentPage === totalPages;
+
+            const pageData = globalLibData.slice((libCurrentPage - 1) * libPageSize, libCurrentPage * libPageSize);
+
+            pageData.forEach(c => {
                 let badgeClass = c.status === '已发布' ? 'badge-green' : (c.status === '待审核' ? 'badge-orange' : 'badge-blue');
 
-                // [新增] 只有超级管理员才能看到删除按钮
                 let actionHtml = '-';
                 if (currentRole === '超级管理员') {
                     actionHtml = `<button class="btn btn-danger btn-sm" onclick="delComponent(${c.id})">删除</button>`;
@@ -1242,10 +1256,11 @@
                 </tr>`;
             });
         }
+        function prevLibPage() { if(libCurrentPage > 1) { libCurrentPage--; renderLibPage(); } }
+        function nextLibPage() { if(libCurrentPage < Math.ceil(globalLibData.length / libPageSize)) { libCurrentPage++; renderLibPage(); } }
 
-        // [新增] 超级管理员删除底层部件
+
         async function delComponent(id) {
-            // 使用原生确认框做二次防呆
             if (!confirm("⚠️ 确定要永久删除该部件吗？删除后将无法在智能联想中搜索到此部件！")) return;
 
             try {
@@ -1253,8 +1268,8 @@
                 const data = await res.json();
                 if (data.status === 'success') {
                     alert("✅ " + data.message);
-                    loadLib();    // 刷新表格
-                    loadStats();  // 刷新顶部统计数字
+                    loadLib();    
+                    loadStats();  
                 } else {
                     alert("❌ " + data.message);
                 }
@@ -1302,13 +1317,11 @@
         async function loadFeedback() {
             const listContainer = document.getElementById('fbListContainer');
 
-            // [核心修改] 如果不是超级管理员，直接隐藏下方的列表，且不向后端请求数据
             if (currentRole !== '超级管理员') {
                 listContainer.style.display = 'none';
                 return; 
             }
 
-            // 如果是超级管理员，显示处理台并拉取数据
             listContainer.style.display = 'block';
 
             const res = await fetch(`/api/feedback?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}`);
@@ -1325,7 +1338,6 @@
                 let badgeClass = f.status === '已解决' ? 'badge-green' : 'badge-orange';
                 let actionHtml = '-';
                 
-                // 超管处理按钮
                 if (f.status === '待处理') {
                     actionHtml = `<button class="btn btn-success btn-sm" onclick="resolveFeedback(${f.id})">✔️ 标记已解决</button>`;
                 }

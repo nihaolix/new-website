@@ -36,7 +36,7 @@ class Component(db.Model):
     __tablename__ = 'components'
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(50), nullable=False)
-    manufacturer = db.Column(db.String(100), default='未知') # [新增] 制造商字段
+    manufacturer = db.Column(db.String(100), default='未知') 
     model = db.Column(db.String(100), unique=True, nullable=False)
     erp_code = db.Column(db.String(50))
     remark = db.Column(db.String(255))
@@ -84,7 +84,7 @@ class BugFeedback(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
-# ================= 2. 核心算法 =================
+# ================= 2. 核心算法与编码引擎 =================
 def calculate_multiset_score(list_a, list_b):
     if not list_a and not list_b: return 1.0
     if not list_a or not list_b: return 0.0
@@ -97,6 +97,43 @@ def calculate_multiset_score(list_a, list_b):
 
 def generate_short_id():
     return 'N' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
+
+
+def generate_business_no(order_type, sys_series_text):
+    """
+    根据图纸规范自动生成单号
+    - order_type: 'ST'(标准单/基准), 'EX'(扩展单), 'SP'(专用单)
+    """
+    # 【修改】：将兜底默认值改为 Z0（未知或其他系统）
+    sys_code = 'Z0'  
+    
+    # 提取并转为大写，方便进行关键字抓取
+    series_upper = str(sys_series_text).upper()
+    
+    # ======= 以后您可以在这里无限添加新规则 =======
+    if '828' in series_upper:
+        sys_code = 'A1'
+    elif '840' in series_upper:
+        sys_code = 'A0'
+    elif 'FANUC' in series_upper or '0I' in series_upper or '31I' in series_upper:
+        sys_code = 'F0'
+    elif 'OKUMA' in series_upper or 'OSP' in series_upper:
+        sys_code = 'O0'  # 自动识别大隈 OSP 系列
+    elif 'MAZAK' in series_upper or 'MAZATROL' in series_upper or 'SMOOTH' in series_upper:
+        sys_code = 'M0'  # 自动识别马扎克系列
+    # 照葫芦画瓢：
+    # elif 'HUAZHONG' in series_upper or 'HNC' in series_upper:
+    #     sys_code = 'H0'
+    # ============================================
+    
+    year_str = datetime.now().strftime("%Y")
+    prefix = f"{order_type}{sys_code}{year_str}"
+    
+    count_orders = CncOrder.query.filter(CncOrder.order_no.like(f"{prefix}%")).count()
+    count_tpls = StandardTemplate.query.filter(StandardTemplate.template_no.like(f"{prefix}%")).count()
+    
+    serial = count_orders + count_tpls + 1
+    return f"{prefix}{serial:03d}"
 
 
 # ================= 3. API 接口 =================
@@ -225,7 +262,8 @@ def order_workflow():
                 if cat not in tpl_comps: tpl_comps[cat] = []
                 tpl_comps[cat].append(mod)
 
-        new_tpl_no = f"GT-STD-N{generate_short_id()[:4]}"
+        sys_combine_str = f"{order.manufacturer} {order.series}"
+        new_tpl_no = generate_business_no('ST', sys_combine_str)
         db.session.add(StandardTemplate(
             template_no=new_tpl_no,
             name=f"基于 {order.order_no} 自动生成的定制基准",
@@ -252,7 +290,6 @@ def upload_components():
             model = str(r.get('型号', '')).strip()
             if not model or model == 'nan': continue
             cat = str(r.get('分类', '其他')).strip()
-            # [新增] 导入时也能读取制造商列
             manuf = str(r.get('制造商', '未知')).strip()
             if manuf == 'nan': manuf = '未知'
             
@@ -280,11 +317,9 @@ def handle_components():
         if request.args.get('status'): query = query.filter_by(status=request.args.get('status'))
         if request.args.get('category') and request.args.get('category') != '全部': query = query.filter_by(
             category=request.args.get('category'))
-        # [新增] 支持制造商模糊搜索
         if request.args.get('manufacturer'): query = query.filter(Component.manufacturer.like(f"%{request.args.get('manufacturer')}%"))
         if request.args.get('model'): query = query.filter(Component.model.like(f"%{request.args.get('model')}%"))
         comps = query.order_by(Component.created_at.desc()).all()
-        # [新增] 返回时带上 manufacturer
         return jsonify([{"id": c.id, "category": c.category, "manufacturer": c.manufacturer, "model": c.model, "erp": c.erp_code, "remark": c.remark,
                          "status": c.status} for c in comps])
 
@@ -293,7 +328,7 @@ def handle_components():
             {"status": "error", "message": "型号已存在"})
         db.session.add(
             Component(category=request.json.get('category', '其他'), 
-                      manufacturer=request.json.get('manufacturer', '未知').strip(), # [新增] 保存制造商
+                      manufacturer=request.json.get('manufacturer', '未知').strip(), 
                       model=request.json.get('model', '').strip(),
                       erp_code=request.json.get('erp'), 
                       remark=request.json.get('remark'), status='待审核'))
@@ -324,17 +359,16 @@ def handle_templates():
                         StandardTemplate.query.order_by(StandardTemplate.created_at.desc()).all()])
     if request.method == 'POST':
         req_id = request.json.get('id')
-        req_no = request.json.get('no', "TPL-" + datetime.now().strftime("%Y%m%d%H%M%S"))
-        req_name = request.json.get('name')
+        req_no = request.json.get('no', '').strip()
+        req_name = request.json.get('name') 
         req_erp = request.json.get('erp_code', '') 
+
+        if not req_no:
+            req_no = generate_business_no('ST', req_name)
 
         existing_no = StandardTemplate.query.filter_by(template_no=req_no).first()
         if existing_no and str(existing_no.id) != str(req_id):
             return jsonify({"status": "error", "message": "该基准单号已存在，请更换一个新的编号！"})
-
-        existing_name = StandardTemplate.query.filter_by(name=req_name).first()
-        if existing_name and str(existing_name.id) != str(req_id):
-            return jsonify({"status": "error", "message": "该标准订单名称已存在！"})
 
         if req_id:
             tpl = db.session.get(StandardTemplate, req_id)
@@ -485,10 +519,13 @@ def handle_orders():
                 best_adds = list((count_new - count_tpl).elements()) 
                 best_rms = list((count_tpl - count_new).elements())  
 
-        final_order_no = f"{best_tpl.template_no}-M" if max_score >= 0.1 and best_tpl else generate_short_id()
-        if max_score >= 0.1 and best_tpl:
-            if CncOrder.query.filter(CncOrder.order_no.like(f"{final_order_no}%")).count() > 0: 
-                final_order_no += str(CncOrder.query.filter(CncOrder.order_no.like(f"{final_order_no}%")).count() + 1)
+        if max_score >= 0.1:
+            o_type = 'EX' 
+        else:
+            o_type = 'SP' 
+            
+        sys_combine_str = f"{data.get('manufacturer', '')} {data.get('series', '')}"
+        final_order_no = generate_business_no(o_type, sys_combine_str)
                 
         matched_name = best_tpl.name if max_score >= 0.1 and best_tpl else "无匹配基准 (电机差异过大)"
         initial_status = '待定基准' if max_score < 0.1 else '待审批'
@@ -530,12 +567,11 @@ def init_database():
             User(username="chen", password="1", role="研发工程师")
         ])
     if Component.query.count() == 0:
-        # [修改] 预置数据增加制造商
         db.session.bulk_save_objects(
             [Component(category="电机", manufacturer="西门子", model="SIMOTICS-1FK7", remark="西门子伺服主轴电机", status="已发布"),
              Component(category="驱动", manufacturer="西门子", model="SINAMICS-S120", remark="多轴驱动模块底座", status="已发布")])
     if StandardTemplate.query.count() == 0:
-        db.session.add(StandardTemplate(template_no="GT-STD-001", name="典型机床配置基准单 v1.0", motor_count=3,
+        db.session.add(StandardTemplate(template_no="STA02026001", name="西门子840Dsl", motor_count=3,
                                         components_json=json.dumps(
                                             {"电机": ["SIMOTICS-1FK7"], "驱动": ["SINAMICS-S120"]})))
     db.session.commit()
