@@ -11,15 +11,14 @@ from collections import Counter
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
-# [结构变更] 升级为 v13 数据库，支持部件制造商字段
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'gt_cnc_v13.db')
+# [结构变更] 升级为 v15 数据库，支持多级审批流程字段
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'gt_cnc_v15.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
 # ================= 全局分类定义 =================
-ALL_CATEGORIES = ["电机", "驱动", "操作部件", "电缆", "系统", "服务", "手册", "网络 / 连接配件", "电气安装辅件",
-                  "软件 / 功能授权", "其他"]
+ALL_CATEGORIES = ["电机", "驱动", "操作部件", "电缆", "数控系统", "服务", "手册", "I/O", "选项功能","其他"]
 CORE_CATEGORIES = ["电机", "驱动", "系统"]
 
 
@@ -30,6 +29,8 @@ class User(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(50), nullable=False)  
     role = db.Column(db.String(50), nullable=False)  
+    # [新增字段] 产品线标签：立铣、卧铣、镗削 等
+    product_line = db.Column(db.String(50), default='无') 
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 class Component(db.Model):
@@ -63,8 +64,14 @@ class CncOrder(db.Model):
     motor_count = db.Column(db.Integer, default=0)
     drive_count = db.Column(db.Integer, default=0)
     applicant = db.Column(db.String(50))
+    
+    # [新增] 多级审批责任人溯源字段
+    supervisor = db.Column(db.String(50)) 
+    team_leader = db.Column(db.String(50)) 
+    chief = db.Column(db.String(50)) 
+    
     applicable_machine = db.Column(db.String(50))
-    status = db.Column(db.String(20), default='待审批')
+    status = db.Column(db.String(20), default='待主管审批')
     reject_reason = db.Column(db.String(255))  
     approve_remark = db.Column(db.String(255))  
     components_json = db.Column(db.Text, default='[]')
@@ -100,17 +107,9 @@ def generate_short_id():
 
 
 def generate_business_no(order_type, sys_series_text):
-    """
-    根据图纸规范自动生成单号
-    - order_type: 'ST'(标准单/基准), 'EX'(扩展单), 'SP'(专用单)
-    """
-    # 【修改】：将兜底默认值改为 Z0（未知或其他系统）
     sys_code = 'Z0'  
-    
-    # 提取并转为大写，方便进行关键字抓取
     series_upper = str(sys_series_text).upper()
     
-    # ======= 以后您可以在这里无限添加新规则 =======
     if '828' in series_upper:
         sys_code = 'A1'
     elif '840' in series_upper:
@@ -118,13 +117,9 @@ def generate_business_no(order_type, sys_series_text):
     elif 'FANUC' in series_upper or '0I' in series_upper or '31I' in series_upper:
         sys_code = 'F0'
     elif 'OKUMA' in series_upper or 'OSP' in series_upper:
-        sys_code = 'O0'  # 自动识别大隈 OSP 系列
+        sys_code = 'O0'  
     elif 'MAZAK' in series_upper or 'MAZATROL' in series_upper or 'SMOOTH' in series_upper:
-        sys_code = 'M0'  # 自动识别马扎克系列
-    # 照葫芦画瓢：
-    # elif 'HUAZHONG' in series_upper or 'HNC' in series_upper:
-    #     sys_code = 'H0'
-    # ============================================
+        sys_code = 'M0'  
     
     year_str = datetime.now().strftime("%Y")
     prefix = f"{order_type}{sys_code}{year_str}"
@@ -148,7 +143,12 @@ def login():
     p = data.get('password')
     user = User.query.filter_by(username=u, password=p).first()
     if user:
-        return jsonify({"status": "success", "username": user.username, "role": user.role})
+        return jsonify({
+            "status": "success", 
+            "username": user.username, 
+            "role": user.role,
+            "product_line": user.product_line
+        })
     return jsonify({"status": "error", "message": "用户名或密码错误，请重试"})
 
 
@@ -159,16 +159,25 @@ def get_stats():
 
     if r == '研发工程师':
         orders = CncOrder.query.filter_by(applicant=u).count()
-        pending = CncOrder.query.filter_by(applicant=u, status='待审批').count()
+        pending = CncOrder.query.filter_by(applicant=u).filter(CncOrder.status != '已完成').count()
+    elif r == '产品主管':
+        orders = CncOrder.query.filter_by(supervisor=u).count()
+        pending = CncOrder.query.filter_by(supervisor=u, status='待主管审批').count()
+    elif r == '团队负责人':
+        orders = CncOrder.query.filter_by(team_leader=u).count()
+        pending = CncOrder.query.filter_by(team_leader=u, status='待负责人审批').count()
+    elif r == '产品线总师':
+        orders = CncOrder.query.filter_by(chief=u).count()
+        pending = CncOrder.query.filter_by(chief=u, status='待总师审批').count()
     elif r == '标准管理员':
-        orders = CncOrder.query.filter_by(status='待审批').count()
-        pending = orders
+        orders = CncOrder.query.filter(CncOrder.status.in_(['待标准审批', '待定基准', '待采购', '已完成'])).count()
+        pending = CncOrder.query.filter(CncOrder.status.in_(['待标准审批', '待定基准'])).count()
     elif r == '采购员':
         orders = CncOrder.query.filter_by(status='待采购').count()
         pending = 0
     else: 
         orders = CncOrder.query.count()
-        pending = CncOrder.query.filter(CncOrder.status.in_(['待审批', '待定基准'])).count()
+        pending = CncOrder.query.filter(~CncOrder.status.in_(['已完成', '已驳回'])).count()
 
     return jsonify({
         "total": Component.query.count(), "published": Component.query.filter_by(status='已发布').count(),
@@ -181,14 +190,28 @@ def get_stats():
 def handle_users():
     if request.method == 'GET':
         users = User.query.order_by(User.created_at.asc()).all()
-        return jsonify([{"id": u.id, "username": u.username, "role": u.role} for u in users])
+        return jsonify([{"id": u.id, "username": u.username, "role": u.role, "product_line": u.product_line} for u in users])
     if request.method == 'POST':
         user = db.session.get(User, request.json.get('id'))
         if user:
             user.role = request.json.get('role')
+            if 'product_line' in request.json:
+                user.product_line = request.json.get('product_line')
             db.session.commit()
             return jsonify({"status": "success"})
         return jsonify({"status": "error"})
+
+
+# [新增] 获取对应产品线的审批人名单
+@app.route('/api/approvers', methods=['GET'])
+def get_approvers():
+    pline = request.args.get('product_line', '通用')
+    supervisors = User.query.filter_by(role='产品主管', product_line=pline).all()
+    leaders = User.query.filter_by(role='团队负责人', product_line=pline).all()
+    return jsonify({
+        "supervisors": [u.username for u in supervisors],
+        "leaders": [u.username for u in leaders]
+    })
 
 
 @app.route('/api/feedback', methods=['GET', 'POST', 'PUT'])
@@ -235,9 +258,22 @@ def order_workflow():
     if not order: return jsonify({"status": "error", "message": "订单不存在"})
 
     if action == 'approve':
-        order.status = '待采购'
-        order.approve_remark = data.get('remark', '')
-        order.reject_reason = ''
+        # 层级流转逻辑
+        if order.status == '待主管审批':
+            if order.match_score >= 0.1:
+                order.status = '待负责人审批'
+            else:
+                order.status = '待定基准'
+            
+        elif order.status == '待负责人审批':
+            
+            order.status = '待总师审批'
+        
+            
+        elif order.status == '待总师审批':
+            order.status = '已完成'
+            order.approve_remark = data.get('remark', '')
+            order.reject_reason = ''
     elif action == 'reject':
         order.status = '已驳回'
         order.reject_reason = data.get('reason', '系统驳回')
@@ -245,11 +281,11 @@ def order_workflow():
     elif action == 'complete':
         order.status = '已完成'
     elif action == 'skip_baseline':
-        order.status = '待审批'
+        order.status = '待标准审批'
         order.approve_remark = "[超管特批流转] " + data.get('remark', '')
         order.reject_reason = ''
     elif action == 'set_baseline':
-        order.status = '待审批'
+        order.status = '待标准审批'
         order.approve_remark = "[超管已确立新基准] " + data.get('remark', '')
         order.reject_reason = ''
 
@@ -408,8 +444,8 @@ def export_order(order_id):
                        "电机数量": order.motor_count, "驱动数量": order.drive_count,
                        "适用机床": order.applicable_machine,
                        "建单时间": order.created_at.strftime("%Y-%m-%d %H:%M")}]).to_excel(writer,
-                                                                                           sheet_name="1-订单概览",
-                                                                                           index=False)
+                                                                                       sheet_name="1-订单概览",
+                                                                                       index=False)
         comps = json.loads(order.components_json)
         if comps:
             enriched_comps = []
@@ -448,8 +484,14 @@ def handle_orders():
 
         if r == '研发工程师':
             query = query.filter_by(applicant=u)
+        elif r == '产品主管':
+            query = query.filter_by(supervisor=u)
+        elif r == '团队负责人':
+            query = query.filter_by(team_leader=u)
+        elif r == '产品线总师':
+            query = query.filter_by(chief=u)
         elif r == '标准管理员':
-            query = query.filter_by(status='待审批')
+            query = query.filter(CncOrder.status.in_(['待标准审批', '待定基准', '待采购', '已完成']))
         elif r == '采购员':
             query = query.filter_by(status='待采购')
 
@@ -468,7 +510,7 @@ def handle_orders():
             "components": json.loads(o.components_json), "matched_template": o.matched_template,
             "match_score": o.match_score, "match_adds": json.loads(o.match_adds),
             "match_rms": json.loads(o.match_rms), "created_at": o.created_at.strftime("%Y-%m-%d %H:%M"),
-            "applicant": o.applicant  
+            "applicant": o.applicant, "supervisor": o.supervisor, "team_leader": o.team_leader, "chief": o.chief
         } for o in orders])
 
     if request.method == 'POST':
@@ -487,6 +529,7 @@ def handle_orders():
                     new_others.append(mod)
 
         best_tpl, max_score = None, 0.0
+        min_diff_count = 999999 
         best_adds, best_rms = [], []
 
         for tpl in StandardTemplate.query.all():
@@ -506,18 +549,27 @@ def handle_orders():
                 else:
                     tpl_others.extend(models)
 
-            if new_motors or tpl_motors:
-                score = calculate_multiset_score(new_motors, tpl_motors)
-            else:
-                score = calculate_multiset_score(new_others, tpl_others)
+            score_motors = calculate_multiset_score(new_motors, tpl_motors) if (new_motors or tpl_motors) else 1.0
+            score_all = calculate_multiset_score(new_all, tpl_all)
+            score = (score_motors * 0.6) + (score_all * 0.4)
 
-            if score > max_score: 
+            count_new, count_tpl = Counter(new_all), Counter(tpl_all)
+            diff_count = sum((count_new - count_tpl).values()) + sum((count_tpl - count_new).values())
+
+            is_better = False
+            if score > max_score:
+                is_better = True
+            elif score == max_score and score > 0:
+                if diff_count < min_diff_count:
+                    is_better = True
+
+            if is_better: 
                 max_score = score
+                min_diff_count = diff_count
                 best_tpl = tpl
                 
-                count_new, count_tpl = Counter(new_all), Counter(tpl_all)
-                best_adds = list((count_new - count_tpl).elements()) 
-                best_rms = list((count_tpl - count_new).elements())  
+                best_adds = [f"{k} (×{v})" if v > 1 else k for k, v in (count_new - count_tpl).items()]
+                best_rms = [f"{k} (×{v})" if v > 1 else k for k, v in (count_tpl - count_new).items()]
 
         if max_score >= 0.1:
             o_type = 'EX' 
@@ -527,8 +579,13 @@ def handle_orders():
         sys_combine_str = f"{data.get('manufacturer', '')} {data.get('series', '')}"
         final_order_no = generate_business_no(o_type, sys_combine_str)
                 
-        matched_name = best_tpl.name if max_score >= 0.1 and best_tpl else "无匹配基准 (电机差异过大)"
-        initial_status = '待定基准' if max_score < 0.1 else '待审批'
+        matched_name = best_tpl.name if max_score >= 0.1 and best_tpl else "无匹配基准 (配置差异过大)"
+        initial_status = '待主管审批'
+
+        # 自动查出该产品线的总师
+        pline = data.get('product_line', '通用')
+        chief_u = User.query.filter_by(role='产品线总师', product_line=pline).first()
+        chief_name = chief_u.username if chief_u else '未分配总师'
 
         db.session.add(CncOrder(
             order_no=final_order_no,
@@ -538,6 +595,9 @@ def handle_orders():
             drive_count=int(data.get('drive_count', 0) or 0),
             applicable_machine=data.get('applicable_machine', '-'),
             applicant=data.get('applicant', '未知'),
+            supervisor=data.get('supervisor'),
+            team_leader=data.get('team_leader'),
+            chief=chief_name,
             status=initial_status,
             components_json=json.dumps(input_comps),
             matched_template=matched_name,
@@ -561,10 +621,14 @@ def init_database():
     db.create_all()
     if User.query.count() == 0:
         db.session.bulk_save_objects([
-            User(username="admin", password="123456", role="超级管理员"),
-            User(username="wang", password="1", role="标准管理员"),
-            User(username="li", password="1", role="采购员"),
-            User(username="chen", password="1", role="研发工程师")
+            User(username="admin", password="123456", role="超级管理员", product_line="全部"),
+            User(username="wang", password="1", role="标准管理员", product_line="通用"),
+            User(username="li", password="1", role="采购员", product_line="通用"),
+            User(username="chen", password="1", role="研发工程师", product_line="立铣"),
+            # [新增] 示例角色数据
+            User(username="zhang", password="1", role="产品主管", product_line="立铣"),
+            User(username="zhao", password="1", role="团队负责人", product_line="立铣"),
+            User(username="qian", password="1", role="产品线总师", product_line="立铣")
         ])
     if Component.query.count() == 0:
         db.session.bulk_save_objects(

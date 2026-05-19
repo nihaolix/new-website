@@ -20,11 +20,9 @@
 
         .sidebar { width: 240px; background: var(--gt-sidebar); color: #a3b1c6; display: flex; flex-direction: column; flex-shrink: 0; z-index: 20; }
         
-        /* [修改] 恢复左对齐，并增加 padding 保持边距 */
         .logo-area { height: 60px; display: flex; align-items: center; padding: 0 24px; background: #171d2b; color: white; font-size: 1.2rem; font-weight: bold; letter-spacing: 1px; }
         
         .nav-menu { padding: 10px 0; overflow-y: auto; flex: 1; }
-        /* [修改] 恢复左对齐，并加入 gap 属性让图标和文字保持间距 */
         .nav-item { padding: 12px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.2s; border-left: 3px solid transparent; }
         .nav-item:hover { background: var(--gt-sidebar-hover); color: white; }
         .nav-item.active { background: var(--gt-sidebar-hover); color: white; border-left-color: #4da1ff; font-weight: bold; }
@@ -78,7 +76,7 @@
         .steps-wrapper { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px 10px; background: #fff; border-radius: 6px; border: 1px solid var(--gt-border); }
         .step-item { display: flex; flex-direction: column; align-items: center; position: relative; flex: 1; z-index: 1; }
         .step-icon { width: 30px; height: 30px; border-radius: 50%; background: #f0f2f5; border: 2px solid #d9d9d9; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--gt-text-sub); margin-bottom: 8px; transition: 0.3s; z-index: 2; font-size: 0.9rem;}
-        .step-text { font-size: 0.85rem; color: var(--gt-text-sub); font-weight: 500; }
+        .step-text { font-size: 0.85rem; color: var(--gt-text-sub); font-weight: 500; text-align:center;}
         .step-line { position: absolute; top: 15px; left: 50%; width: 100%; height: 2px; background: #e8e8e8; z-index: 0; }
         .step-item:last-child .step-line { display: none; }
         
@@ -112,13 +110,13 @@
         /* 全局弹窗 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal-overlay.active { display: flex; }
-        .modal-content { background: white; border-radius: 8px; width: 700px; max-width: 90%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .modal-content { background: white; border-radius: 8px; width: 750px; max-width: 90%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .modal-header { padding: 15px 24px; border-bottom: 1px solid var(--gt-border); display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.1rem; }
         .modal-close { cursor: pointer; color: var(--gt-text-sub); font-size: 1.5rem; border: none; background: transparent; line-height: 1; }
         .modal-close:hover { color: var(--danger); }
         .modal-body { padding: 24px; overflow-y: auto; flex: 1; font-size: 0.95rem; line-height: 1.6;}
 
-        /* ================= 新增：智能联想输入框样式 ================= */
+        /*智能联想输入框样式*/
         .autocomplete-wrapper { position: relative; width: 100%; }
         .autocomplete-list {
             position: absolute; top: 100%; left: 0; right: 0;
@@ -134,17 +132,16 @@
 <body>
 
     <div id="loginModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#1e2638; z-index:9999; display:flex; align-items:center; justify-content:center;">
-        <div style="background:white; padding:40px; border-radius:8px; width:380px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        <div style="background:white; padding:40px; border-radius:8px; width:450px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
             <h2 style="margin-bottom:20px; text-align:center; color:var(--gt-accent);">机床数控配置平台</h2>
             <input type="text" id="loginUser" placeholder="用户名 (例如: admin)" style="margin-bottom:15px; padding:10px;">
-            <input type="password" id="loginPwd" placeholder="密码 (例如: 123456)" style="margin-bottom:20px; padding:10px;" onkeydown="if(event.key==='Enter') doLogin()">
+            <input type="password" id="loginPwd" placeholder="密码" style="margin-bottom:20px; padding:10px;" onkeydown="if(event.key==='Enter') doLogin()">
             <button class="btn btn-primary" style="width:100%; padding:10px; font-size:1rem;" onclick="doLogin()">安全登录</button>
-            <div style="margin-top:20px; font-size:0.85rem; color:#666; background:#f8fafc; padding:12px; border-radius:4px; line-height: 1.5;">
-                <strong>测试预置账号库：</strong><br>
-                👑 <code>admin</code> / <code>123456</code> (超级管理员)<br>
-                👤 <code>wang</code> / <code>1</code> (标准管理员)<br>
-                👤 <code>chen</code> / <code>1</code> (研发工程师)<br>
-                👤 <code>li</code> / <code>1</code> (采购员)
+            <div style="margin-top:20px; font-size:0.85rem; color:#666; background:#f8fafc; padding:12px; border-radius:4px; line-height: 1.6;">
+                <strong>测试预置账号库：</strong>(密码除超管外均为 1)<br>
+                👑 <code>admin</code>(超管) &nbsp;&nbsp;👤 <code>wang</code>(标准) &nbsp;&nbsp;👤 <code>li</code>(采购)<br>
+                👤 <code>chen</code>(研发-立铣) &nbsp;&nbsp;👤 <code>zhang</code>(主管-立铣)<br>
+                👤 <code>zhao</code>(负责-立铣) &nbsp;&nbsp;👤 <code>qian</code>(总师-立铣)
             </div>
         </div>
     </div>
@@ -201,7 +198,7 @@
                     <div class="stat-card"><div class="stat-title">入库部件数量(个)</div><div class="stat-value" id="st-total">0</div><div class="bg-icon">📦</div></div>
                     <div class="stat-card"><div class="stat-title">数控订单总数(个)</div><div class="stat-value" id="st-ord">0</div><div class="bg-icon">📄</div></div>
                     <div class="stat-card"><div class="stat-title">标准订单库(个)</div><div class="stat-value" id="st-tpl">0</div><div class="bg-icon">📑</div></div>
-                    <div class="stat-card"><div class="stat-title">待审批订单(个)</div><div class="stat-value" id="st-pen">0</div><div class="bg-icon">⏳</div></div>
+                    <div class="stat-card"><div class="stat-title">我的待办提醒(个)</div><div class="stat-value" id="st-pen">0</div><div class="bg-icon">⏳</div></div>
                 </div>
                 <div class="card-container">
                     <div class="section-title"><span>标准订单基准库阅览</span></div>
@@ -215,15 +212,31 @@
             </div>
 
             <div id="orders" class="panel">
-                <div class="card-container eng-only" style="display:none;">
-                    <div class="section-title" style="color:var(--gt-accent);">创建新数控订单 & 自动基准匹配</div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin-bottom:20px;">
-                        <div><label style="font-size:0.9rem;color:var(--gt-text-sub);">制造商</label><input type="text" id="oMan" placeholder="如: 西门子"></div>
-                        <div><label style="font-size:0.9rem;color:var(--gt-text-sub);">系统系列</label><input type="text" id="oSer" placeholder="如: <3>S系列"></div>
-                        <div><label style="font-size:0.9rem;color:var(--gt-text-sub);">适用机床</label><input type="text" id="oMac" placeholder="如: 五轴/镗铣"></div>
+                <div class="card-container eng-only" style="display:none;" id="createOrderPanel">
+                    <div class="section-title" style="color:var(--gt-accent);">创建新数控订单 & 流转审批设置</div>
+                    
+                    <div style="background:#f8fafc; padding:15px; border-radius:6px; border:1px solid var(--gt-border); margin-bottom: 20px;">
+                        <div style="font-weight: bold; margin-bottom: 10px; color:var(--gt-text-main); font-size:0.95rem;">① 指定业务流转审批人 (对应当前产线: <span id="displayPline" style="color:var(--gt-accent);"></span>)</div>
+                        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:15px;">
+                            <div><label style="font-size:0.85rem;color:var(--gt-text-sub);">选择本单产品主管</label>
+                                <select id="oSupervisor" style="margin-top:5px; width:100%; border:1px solid #d9d9d9; border-radius:4px; padding:8px 12px; outline:none; transition:0.2s;"></select>
+                            </div>
+                            <div><label style="font-size:0.85rem;color:var(--gt-text-sub);">选择本单团队负责人</label>
+                                <select id="oLeader" style="margin-top:5px; width:100%; border:1px solid #d9d9d9; border-radius:4px; padding:8px 12px; outline:none; transition:0.2s;"></select>
+                            </div>
+                        </div>
+                        <div style="font-size:0.8rem; color:#888; margin-top:8px;">* 提交后将按顺序流转：产品主管 ➔ 团队负责人 ➔ 产线总师 (系统自动指派) ➔ 方案定基</div>
                     </div>
+
+                    <div style="font-weight: bold; margin-bottom: 10px; color:var(--gt-text-main); font-size:0.95rem;">② 基础属性定义</div>
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin-bottom:20px;">
+                        <div><input type="text" id="oMan" placeholder="制造商 (如: 西门子)"></div>
+                        <div><input type="text" id="oSer" placeholder="系统类型 (如: 840Dsl)"></div>
+                        <div><input type="text" id="oMac" placeholder="适用机床 (如: 五轴/镗铣)"></div>
+                    </div>
+                    
                     <div style="border-top: 1px dashed var(--gt-border); padding-top: 20px; margin-bottom:20px;">
-                        <div style="font-weight: bold; margin-bottom: 10px; color:var(--gt-text-main);">包含的部件明细录入</div>
+                        <div style="font-weight: bold; margin-bottom: 10px; color:var(--gt-text-main); font-size:0.95rem;">③ 包含的部件明细录入</div>
                         <table id="oCompTable">
                             <thead><tr><th width="20%">部件分类</th><th>输入部件型号</th><th width="15%">数量</th><th width="15%">操作</th></tr></thead>
                             <tbody>
@@ -242,7 +255,7 @@
                         <button class="btn btn-outline btn-sm" onclick="addOrderCompRow()">+ 增加一条部件明细</button>
                     </div>
                     <div style="text-align: center; margin-top: 10px;">
-                        <button class="btn btn-primary" onclick="submitOrder()">🤖 提交创建订单</button>
+                        <button class="btn btn-primary" onclick="submitOrder()">🤖 提交创建订单并流转</button>
                     </div>
                 </div>
 
@@ -323,7 +336,7 @@
                                 <option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他">其他</option>
                             </select>
 
-                            <input type="text" id="searchMan" placeholder="制造商 (如 西门子)" style="width:140px; padding:8px 12px; font-size: 0.95rem;">
+                            <input type="text" id="searchMan" placeholder="制造商 (如 西门子)" style="width:250px; padding:8px 12px; font-size: 0.95rem;">
                             
                             <input type="text" id="searchMod" placeholder="输入部件型号关键词..." style="width:250px; padding:8px 12px; font-size: 0.95rem;">
                             
@@ -376,7 +389,7 @@
                 <div class="card-container">
                     <div class="section-title">配置员工系统角色</div>
                     <table id="usersTable">
-                        <thead><tr><th>注册用户名</th><th>当前拥有角色</th><th>分配新角色</th></tr></thead>
+                        <thead><tr><th>注册用户名</th><th>当前角色/标签</th><th>分配新角色</th><th>分配产品线标签</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -456,13 +469,15 @@
         };
         
         let globalTplData = [], globalOrdersData = [], globalLibData = [];
-        let tplListCurrentPage = 1, tplListPageSize = 10; // 标准库列表分页参数
-        let orderCurrentPage = 1, orderPageSize = 6;  // 订单卡片流分页参数
-        let libCurrentPage = 1, libPageSize = 10;     // 部件列表分页参数
+        let tplListCurrentPage = 1, tplListPageSize = 10; 
+        let orderCurrentPage = 1, orderPageSize = 6;  
+        let libCurrentPage = 1, libPageSize = 10;     
 
         // 保存真实登录用户的状态
         let currentUser = null;
         let currentRole = null;
+        // [新增] 存储当前用户的产品线
+        let currentProductLine = null;
 
         function openModal(title, html, footerHtml = '') {
             document.getElementById('modalTitle').innerText = title;
@@ -486,6 +501,8 @@
                 if(data.status === 'success') {
                     currentUser = data.username;
                     currentRole = data.role;
+                    // [新增] 登录成功时获取产品线
+                    currentProductLine = data.product_line;
                     document.getElementById('loginModal').style.display = 'none';
                     applyUserRole();
                 } else {
@@ -495,7 +512,7 @@
         }
 
         function doLogout() {
-            currentUser = null; currentRole = null;
+            currentUser = null; currentRole = null; currentProductLine = null;
             document.getElementById('loginUser').value = '';
             document.getElementById('loginPwd').value = '';
             document.getElementById('loginModal').style.display = 'flex';
@@ -507,11 +524,20 @@
             if(currentRole === '超级管理员') roleIcon = '👑';
             else if(currentRole === '采购员') roleIcon = '📦';
 
-            document.getElementById('currentUserSpan').innerText = `${roleIcon} ${currentRole}：${currentUser}`;
+            // [新增] 界面上展示用户的产品线
+            document.getElementById('currentUserSpan').innerText = `${roleIcon} ${currentRole} [${currentProductLine || '通用'}]：${currentUser}`;
 
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = (currentRole === '标准管理员' || currentRole === '超级管理员') ? 'flex' : 'none');
             document.querySelectorAll('.super-admin-only').forEach(el => el.style.display = (currentRole === '超级管理员') ? 'flex' : 'none');
-            document.querySelectorAll('.eng-only').forEach(el => el.style.display = (currentRole === '研发工程师' || currentRole === '超级管理员') ? 'block' : 'none');
+            
+            // [新增] 只有普通研发人员和超管可以建单
+            if (currentRole === '研发工程师' || currentRole === '超级管理员') {
+                document.getElementById('createOrderPanel').style.display = 'block';
+            } else {
+                document.getElementById('createOrderPanel').style.display = 'none';
+            }
+            
+            document.getElementById('displayPline').innerText = currentProductLine || '通用';
 
             showPanel('dashboard', document.querySelectorAll('.nav-item')[0]);
         }
@@ -522,7 +548,7 @@
             document.getElementById('pageTitle').innerText = el.innerText.replace(/[\n\r]+|[\s]{2,}/g, ' ').trim();
 
             if(id === 'dashboard') { loadStats(); loadDashTpl(); }
-            if(id === 'orders') { orderCurrentPage = 1; loadOrders(); }
+            if(id === 'orders') { orderCurrentPage = 1; loadOrders(); if(currentRole==='研发工程师'||currentRole==='超级管理员') fetchApprovers(); }
             if(id === 'templates') { tplListCurrentPage = 1; loadTemplatePage(); }
             if(id === 'library') { libCurrentPage = 1; loadLib(); }
             if(id === 'audit') loadAudit();
@@ -530,7 +556,17 @@
             if(id === 'feedback') loadFeedback();
         }
 
-        // 获取统计数据时发送当前用户信息
+        // [新增] 动态拉取当前产品线的主管和负责人
+        async function fetchApprovers() {
+            const res = await fetch(`/api/approvers?product_line=${encodeURIComponent(currentProductLine)}`);
+            const data = await res.json();
+            const supSelect = document.getElementById('oSupervisor');
+            const leadSelect = document.getElementById('oLeader');
+            
+            supSelect.innerHTML = data.supervisors.length ? data.supervisors.map(u => `<option value="${u}">${u}</option>`).join('') : '<option value="">无可用主管</option>';
+            leadSelect.innerHTML = data.leaders.length ? data.leaders.map(u => `<option value="${u}">${u}</option>`).join('') : '<option value="">无可用负责人</option>';
+        }
+
         async function loadStats() {
             const url = `/api/stats?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}`;
             const d = await(await fetch(url)).json();
@@ -574,17 +610,28 @@
             const t = globalTplData.find(x => x.id === id);
             if(!t) return;
             let coreHtml = '', otherHtml = '', coreCount = 0, otherCount = 0;
+            
             Object.keys(t.data).forEach(cat => {
                 if(t.data[cat] && t.data[cat].length > 0) {
+                    const counts = {};
+                    t.data[cat].forEach(mod => counts[mod] = (counts[mod] || 0) + 1);
+
                     if(CORE_CATS.includes(cat)) {
-                        coreHtml += t.data[cat].map(x => `<li style="margin-bottom:6px;"><span class="badge badge-blue" style="margin-right:8px; display:inline-block; width:120px; text-align:center;">${cat}</span>${x}</li>`).join('');
+                        Object.entries(counts).forEach(([mod, qty]) => {
+                            let displayStr = qty > 1 ? `${mod} <span style="color:var(--gt-accent); font-weight:bold;">(×${qty})</span>` : mod;
+                            coreHtml += `<li style="margin-bottom:6px;"><span class="badge badge-blue" style="margin-right:8px; display:inline-block; width:120px; text-align:center;">${cat}</span>${displayStr}</li>`;
+                        });
                         coreCount += t.data[cat].length;
                     } else {
-                        otherHtml += t.data[cat].map(x => `<li style="margin-bottom:6px;"><span class="badge badge-green" style="margin-right:8px; display:inline-block; width:120px; text-align:center;">${cat}</span>${x}</li>`).join('');
+                        Object.entries(counts).forEach(([mod, qty]) => {
+                            let displayStr = qty > 1 ? `${mod} <span style="color:var(--gt-accent); font-weight:bold;">(×${qty})</span>` : mod;
+                            otherHtml += `<li style="margin-bottom:6px;"><span class="badge badge-green" style="margin-right:8px; display:inline-block; width:120px; text-align:center;">${cat}</span>${displayStr}</li>`;
+                        });
                         otherCount += t.data[cat].length;
                     }
                 }
             });
+            
             let html = `
                 <div style="font-size:1.05rem; margin-bottom:15px;"><strong>【${t.name}】</strong> 结构明细：</div>
                 <div style="background:#f8fafc; padding:15px; border-radius:6px; border:1px solid var(--gt-border);">
@@ -623,11 +670,11 @@
             const url = `/api/orders?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}&search=${encodeURIComponent(searchVal)}`;
 
             globalOrdersData = await(await fetch(url)).json();
-            orderCurrentPage = 1; // 每次重新搜索重置为第一页
+            orderCurrentPage = 1; 
             renderOrderPage();
         }
 
-        // [新增] 渲染订单卡片分页
+        // [新增] 根据审批流状态动态渲染卡片按钮
         function renderOrderPage() {
             const grid = document.getElementById('orderGrid'); 
             grid.innerHTML = '';
@@ -657,7 +704,18 @@
                 if(o.status === '已完成') badgeCls = 'badge-green';
                 if(o.status === '待定基准') badgeCls = 'badge-purple'; 
 
-                let actionHtml = `<button class="btn btn-outline btn-sm" onclick="showOrderDetails(${o.id})">📄订单详情</button>`;
+                let actionHtml = `<button class="btn btn-outline btn-sm" onclick="showOrderDetails(${o.id})">📄 详情</button>`;
+
+                // [修改] 根据层级匹配相应角色的审核权限
+                if (o.status === '待主管审批' && (currentUser === o.supervisor || currentRole === '超级管理员')) {
+                    actionHtml += `<button class="btn btn-success btn-sm" onclick="doOrderWorkflow(${o.id}, 'approve', '主管')">✔️ 准许流转</button> <button class="btn btn-danger btn-sm" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回</button>`;
+                }
+                if (o.status === '待负责人审批' && (currentUser === o.team_leader || currentRole === '超级管理员')) {
+                    actionHtml += `<button class="btn btn-success btn-sm" onclick="doOrderWorkflow(${o.id}, 'approve', '负责')">✔️ 准许流转</button> <button class="btn btn-danger btn-sm" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回</button>`;
+                }
+                if (o.status === '待总师审批' && (currentUser === o.chief || currentRole === '超级管理员')) {
+                    actionHtml += `<button class="btn btn-success btn-sm" onclick="doOrderWorkflow(${o.id}, 'approve', '总师')">✔️ 终审下达</button> <button class="btn btn-danger btn-sm" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回</button>`;
+                }
 
                 if (o.status === '待定基准' && currentRole === '超级管理员') {
                     actionHtml += `<button class="btn btn-success btn-sm" style="background:#722ed1; border-color:#722ed1;" onclick="doOrderWorkflow(${o.id}, 'set_baseline')">🎯 建立基准</button>`;
@@ -665,22 +723,16 @@
                     actionHtml += `<button class="btn btn-danger btn-sm" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回</button>`;
                 }
 
-                if (o.status === '待审批' && (currentRole === '标准管理员' || currentRole === '超级管理员')) {
-                    actionHtml += `<button class="btn btn-success btn-sm" onclick="doOrderWorkflow(${o.id}, 'approve')">✔️ 通过审批 </button>`;
-                    actionHtml += `<button class="btn btn-danger btn-sm" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回订单</button>`;
-                }
-                if (o.status === '待采购' && (currentRole === '采购员' || currentRole === '超级管理员')) {
-                    actionHtml += `<button class="btn btn-primary btn-sm" onclick="doOrderWorkflow(${o.id}, 'complete')">📦 采购已完成</button>`;
-                }
+               
 
                 if (currentRole === '超级管理员') {
-                    actionHtml += `<button class="btn btn-danger btn-sm" style="background:#fff1f0; color:#f5222d; border-color:#ffa39e;" onclick="deleteOrder(${o.id})">🗑️ 删除</button>`;
+                    actionHtml += `<button class="btn btn-danger btn-sm" style="background:#fff1f0; color:#f5222d; border-color:#ffa39e;" onclick="deleteOrder(${o.id})">🗑️</button>`;
                 }
 
                 let msgHtml = '';
                 if(o.status === '已驳回' && o.reject_reason) {
                     msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border);"><div class="label" style="color:var(--danger);">驳回原因</div><div class="val" style="color:var(--danger); white-space:normal; font-size:0.85rem;">${o.reject_reason}</div></div>`;
-                } else if (o.status !== '待审批' && o.status !== '已驳回' && o.status !== '待定基准' && o.approve_remark) {
+                } else if (o.status !== '待审批' && o.status !== '待主管审批' && o.status !== '待负责人审批' && o.status !== '待总师审批' && o.status !== '已驳回' && o.status !== '待定基准' && o.approve_remark) {
                     msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border);"><div class="label" style="color:var(--success);">审批备注</div><div class="val" style="color:var(--success); white-space:normal; font-size:0.85rem;">${o.approve_remark}</div></div>`;
                 }
 
@@ -696,8 +748,8 @@
                         <div class="order-card-body">
                             <div class="order-row"><div class="label">建单人员</div><div class="val">${o.applicant || '-'}</div></div>
                             <div class="order-row"><div class="label">适用机床</div><div class="val blue">${o.applicable_machine}</div></div>
-                            <div class="order-row"><div class="label">系统系列</div><div class="val">${o.series}</div></div>
-                            <div class="order-row"><div class="label">电机数量</div><div class="val">${o.motor_count}</div></div>
+                            <div class="order-row"><div class="label">系统类型</div><div class="val">${o.series}</div></div>
+                            <div class="order-row"><div class="label">流转总师</div><div class="val">${o.chief}</div></div>
                             <div class="order-row"><div class="label">基准匹配</div><div class="val blue" title="${o.matched_template}">${matchText}</div></div>
                             ${msgHtml}
                         </div>
@@ -708,7 +760,6 @@
         function prevOrderPage() { if(orderCurrentPage > 1) { orderCurrentPage--; renderOrderPage(); } }
         function nextOrderPage() { if(orderCurrentPage < Math.ceil(globalOrdersData.length / orderPageSize)) { orderCurrentPage++; renderOrderPage(); } }
 
-
         let currentWorkflowAction = null;
         let currentWorkflowOrderId = null;
 
@@ -716,53 +767,38 @@
             document.getElementById('customPromptModal').classList.remove('active');
         }
 
-        async function doOrderWorkflow(id, action) {
+        async function doOrderWorkflow(id, action, contextRole = '') {
             document.getElementById('cpInput').style.display = 'block';
 
             if (action === 'reject') {
                 document.getElementById('cpTitle').innerHTML = '❌ 驳回订单';
-                document.getElementById('cpMessage').innerText = '请填写驳回给工程师的【具体原因】（必填）：';
+                document.getElementById('cpMessage').innerText = '请填写驳回的具体原因（必填）：';
                 document.getElementById('cpInput').value = '';
                 currentWorkflowAction = 'reject';
-                currentWorkflowOrderId = id;
-                document.getElementById('customPromptModal').classList.add('active');
-                document.getElementById('cpInput').focus();
             }
             else if (action === 'approve') {
-                document.getElementById('cpTitle').innerHTML = '✔️ 通过审批';
-                document.getElementById('cpMessage').innerText = '已核验无误，(可选) 填写交由采购的【通过备注】：';
+                document.getElementById('cpTitle').innerHTML = '✔️ 准许流转';
+                document.getElementById('cpMessage').innerText = contextRole === '标准' ? '定基准/同意通过并交接给采购，(可选)填写处理备注：' : '审批通过并进入下一流转环节 (无须填备注)：';
+                document.getElementById('cpInput').style.display = contextRole === '标准' ? 'block' : 'none';
                 document.getElementById('cpInput').value = '';
                 currentWorkflowAction = 'approve';
-                currentWorkflowOrderId = id;
-                document.getElementById('customPromptModal').classList.add('active');
-                document.getElementById('cpInput').focus();
             }
             else if (action === 'complete') {
                 document.getElementById('cpTitle').innerHTML = '📦 采购完结确认';
                 document.getElementById('cpMessage').innerText = '确认已完成所有采购入库核销流程？(此操作不可逆)';
                 document.getElementById('cpInput').style.display = 'none'; 
                 currentWorkflowAction = 'complete';
-                currentWorkflowOrderId = id;
-                document.getElementById('customPromptModal').classList.add('active');
             }
-            else if (action === 'set_baseline') {
-                document.getElementById('cpTitle').innerHTML = '🎯 一键建基准并流转';
-                document.getElementById('cpMessage').innerText = '系统将以此订单明细自动生成新基准库，并流转给标准管理员。请填写交办备注：';
+            else if (action === 'set_baseline' || action === 'skip_baseline') {
+                document.getElementById('cpTitle').innerHTML = action === 'set_baseline' ? '🎯 一键建基准并流转' : '➡️ 特批定制流转';
+                document.getElementById('cpMessage').innerText = '系统将自动流转给标准管理员。请填写特批交办备注：';
                 document.getElementById('cpInput').value = '';
-                currentWorkflowAction = 'set_baseline';
-                currentWorkflowOrderId = id;
-                document.getElementById('customPromptModal').classList.add('active');
-                document.getElementById('cpInput').focus();
+                currentWorkflowAction = action;
             }
-            else if (action === 'skip_baseline') {
-                document.getElementById('cpTitle').innerHTML = '➡️ 特批定制流转';
-                document.getElementById('cpMessage').innerText = '不建立基准，作为特批非标单直接流转给标准管理员。请填写特批备注：';
-                document.getElementById('cpInput').value = '';
-                currentWorkflowAction = 'skip_baseline';
-                currentWorkflowOrderId = id;
-                document.getElementById('customPromptModal').classList.add('active');
-                document.getElementById('cpInput').focus();
-            }
+            
+            currentWorkflowOrderId = id;
+            document.getElementById('customPromptModal').classList.add('active');
+            if(document.getElementById('cpInput').style.display !== 'none') document.getElementById('cpInput').focus();
         }
 
         document.getElementById('cpConfirmBtn').onclick = async function() {
@@ -772,7 +808,7 @@
             if (currentWorkflowAction === 'reject') {
                 if (val === '') return alert("操作失败：必须填写驳回原因！");
                 payload.reason = val;
-            } else if (currentWorkflowAction === 'approve') {
+            } else if (['approve', 'set_baseline', 'skip_baseline'].includes(currentWorkflowAction)) {
                 payload.remark = val;
             }
 
@@ -782,32 +818,36 @@
             loadOrders(); loadStats();
         };
 
+        // [新增] 6步全景智能弹窗渲染
         function showOrderDetails(id) {
             const o = globalOrdersData.find(x => x.id === id);
             if(!o) return;
 
-            let s1 = 'completed', s2 = '', s3 = '', s4 = '';
-            let i2 = '2', i3 = '3', i4 = '4'; 
+            let s1 = 'completed', s2 = '', s3 = '', s4 = '', s5 = '', s6 = '';
+            
+            const stepsMap = {
+                '待主管审批': {s2:'active'},
+                '待负责人审批': {s2:'completed', s3:'active'},
+                '待总师审批': {s2:'completed', s3:'completed', s4:'active'},
+                '已完成': {s2:'completed', s3:'completed', s4:'completed'}, // 4步全满
+                '已驳回': {s2: o.supervisor ? 'completed':'', s3: o.team_leader ? 'completed':''} 
+            };
 
-            if (o.status === '待审批' || o.status === '待定基准') {
-                s2 = 'active';
-            } else if (o.status === '待采购') {
-                s2 = 'completed'; i2 = '✓';
-                s3 = 'active';
-            } else if (o.status === '已完成') {
-                s2 = 'completed'; i2 = '✓';
-                s3 = 'completed'; i3 = '✓';
-                s4 = 'completed'; i4 = '✓';
-            } else if (o.status === '已驳回') {
-                s2 = 'rejected'; i2 = '✕';
+            const conf = stepsMap[o.status] || {};
+            s2 = conf.s2||''; s3 = conf.s3||''; s4 = conf.s4||''; s5 = conf.s5||''; s6 = conf.s6||'';
+            if (o.status === '已驳回') {
+                if(s4) s4 = 'rejected'; else if(s3) s3 = 'rejected'; else if(s2) s2 = 'rejected';
             }
 
+       
+
+            // 2. 修改进度条 HTML 结构 (改为 4 步)
             let progressHtml = `
-                <div class="steps-wrapper">
-                    <div class="step-item ${s1}"><div class="step-line"></div><div class="step-icon">✓</div><div class="step-text">提交申请</div></div>
-                    <div class="step-item ${s2}"><div class="step-line"></div><div class="step-icon">${i2}</div><div class="step-text">方案审核</div></div>
-                    <div class="step-item ${s3}"><div class="step-line"></div><div class="step-icon">${i3}</div><div class="step-text">采购执行</div></div>
-                    <div class="step-item ${s4}"><div class="step-icon">${i4}</div><div class="step-text">交付完结</div></div>
+                <div class="steps-wrapper" style="padding:15px 5px;">
+                    <div class="step-item ${s1}"><div class="step-line"></div><div class="step-icon">${s1==='completed'?'✓':'1'}</div><div class="step-text">提交申请</div></div>
+                    <div class="step-item ${s2}"><div class="step-line"></div><div class="step-icon">${s2==='completed'?'✓':(s2==='rejected'?'✕':'2')}</div><div class="step-text">主管审核</div></div>
+                    <div class="step-item ${s3}"><div class="step-line"></div><div class="step-icon">${s3==='completed'?'✓':(s3==='rejected'?'✕':'3')}</div><div class="step-text">负责人审核</div></div>
+                    <div class="step-item ${s4}"><div class="step-icon">${s4==='completed'?'✓':(s4==='rejected'?'✕':'4')}</div><div class="step-text">总师核验</div></div>
                 </div>
             `;
 
@@ -835,7 +875,7 @@
 
             let html = `
                 ${progressHtml}
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:6px; font-size:0.9rem;"><div><span style="color:var(--gt-text-sub)">订单号：</span> <strong>${o.order_no}</strong></div><div><span style="color:var(--gt-text-sub)">制造商：</span> ${o.manufacturer}</div><div><span style="color:var(--gt-text-sub)">当前状态：</span> <strong style="color:var(--gt-accent)">${o.status}</strong></div><div><span style="color:var(--gt-text-sub)">系统系列：</span> ${o.series}</div><div><span style="color:var(--gt-text-sub)">适用机床：</span> ${o.applicable_machine}</div><div><span style="color:var(--gt-text-sub)">创建时间：</span> ${o.created_at}</div></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:6px; font-size:0.9rem;"><div><span style="color:var(--gt-text-sub)">订单号：</span> <strong>${o.order_no}</strong></div><div><span style="color:var(--gt-text-sub)">制造商：</span> ${o.manufacturer}</div><div><span style="color:var(--gt-text-sub)">当前状态：</span> <strong style="color:var(--gt-accent)">${o.status}</strong></div><div><span style="color:var(--gt-text-sub)"系统类型：</span> ${o.series}</div><div><span style="color:var(--gt-text-sub)">适用机床：</span> ${o.applicable_machine}</div><div><span style="color:var(--gt-text-sub)">创建时间：</span> ${o.created_at}</div></div>
                 <div style="font-weight:bold; border-bottom:2px solid var(--gt-border); padding-bottom:8px;">包含的硬件清单：</div>
                 ${compHtml}
                 ${diffHtml}
@@ -848,9 +888,14 @@
             const man = document.getElementById('oMan').value.trim();
             const ser = document.getElementById('oSer').value.trim();
             const mac = document.getElementById('oMac').value.trim();
+            const sup = document.getElementById('oSupervisor').value;
+            const lead = document.getElementById('oLeader').value;
 
             if (!man || !ser || !mac) {
-                return alert("⚠️ 提交失败：请将【制造商】、【系统系列】和【适用机床】填写完整！");
+                return alert("⚠️ 提交失败：请将【制造商】、【系统类型】和【适用机床】填写完整！");
+            }
+            if (!sup || !lead) {
+                return alert("⚠️ 提交失败：此产品线下没有完整的主管或负责人配置，无法发起审批工作流！");
             }
 
             const comps = [];
@@ -887,6 +932,9 @@
                 drive_count: comps.filter(c => c.category === '驱动').length,
                 applicable_machine: mac,
                 applicant: currentUser, 
+                product_line: currentProductLine,
+                supervisor: sup,
+                team_leader: lead,
                 components: comps
             };
 
@@ -906,7 +954,7 @@
             loadOrders();
             loadStats();
 
-            alert("✅ 订单提交成功！已流转至【标准管理员】进行审批。");
+            alert("✅ 订单提交成功！已流转至【产品主管】进行初审。");
         }
 
         async function deleteOrder(id) {
@@ -925,8 +973,6 @@
                 alert("❌ 网络异常，删除失败。");
             }
         }
-
-      // --- 核心升级：标准库管理与智能输入 ---
 
         function addTplCompRow(defaultCat = '其他', defaultMod = '', defaultQty = 1) {
             const tr = document.createElement('tr');
@@ -994,7 +1040,6 @@
             renderTplListPage();
         }
 
-        // [新增] 渲染标准库列表分页
         function renderTplListPage() {
             const tbody = document.querySelector('#tplTable tbody');
             tbody.innerHTML = '';
@@ -1070,7 +1115,7 @@
 
             document.querySelector('.content-area').scrollTo({top: 0, behavior: 'smooth'});
         }
-
+       let currentEditTplId = null;
        async function saveTemplate() {
             const name = document.getElementById('tName').value.trim();
             const no = document.getElementById('tNo').value.trim();
@@ -1218,7 +1263,6 @@
             renderLibPage();
         }
 
-        // [新增] 渲染部件列表分页
         function renderLibPage() {
             const b = document.querySelector('#libTable tbody'); 
             b.innerHTML = '';
@@ -1286,7 +1330,7 @@
         }
         async function doAudit(id) { await fetch('/api/components/audit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, action:'已发布'}) }); loadAudit(); loadStats(); }
 
-        // --- 超级管理员：分配用户角色 ---
+        // --- 超级管理员：分配用户角色及产品线 ---
         async function loadUsers() {
             const users = await(await fetch('/api/users')).json();
             const b = document.querySelector('#usersTable tbody'); b.innerHTML = '';
@@ -1294,26 +1338,51 @@
                 b.innerHTML += `
                     <tr>
                         <td style="font-weight:bold;">${u.username}</td>
-                        <td><span class="badge badge-blue">${u.role}</span></td>
                         <td>
-                            <select class="role-switch" style="width:160px; color:#333; background:#fff; border:1px solid #ccc; padding:6px; border-radius:4px;" onchange="changeUserRole(${u.id}, this.value)">
-                                <option value="">- 重新分配角色 -</option>
+                            <span class="badge badge-blue" style="margin-bottom: 4px;">${u.role}</span><br>
+                            <span class="badge badge-green">${u.product_line || '通用'}</span>
+                        </td>
+                        <td>
+                            <select id="role-${u.id}" style="width:140px; color:#333; background:#fff; border:1px solid #ccc; padding:6px; border-radius:4px;">
+                                <option value="${u.role}" selected hidden>${u.role}</option>
                                 <option value="研发工程师">研发工程师</option>
                                 <option value="标准管理员">标准管理员</option>
                                 <option value="采购员">采购员</option>
                                 <option value="超级管理员">超级管理员</option>
+                                <option value="产品主管">产品主管</option>
+                                <option value="团队负责人">团队负责人</option>
+                                <option value="产品线总师">产品线总师</option>
                             </select>
+                        </td>
+                        <td>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <select id="pline-${u.id}" style="width:120px; color:#333; background:#fff; border:1px solid #ccc; padding:6px; border-radius:4px;">
+                                    <option value="${u.product_line || '通用'}" selected hidden>${u.product_line || '通用'}</option>
+                                    <option value="立铣">立铣</option>
+                                    <option value="卧铣">卧铣</option>
+                                    <option value="镗削">镗削</option>
+                                    <option value="通用">通用</option>
+                                    <option value="全部">全部</option>
+                                </select>
+                                <button class="btn btn-primary btn-sm" onclick="saveUserConfig(${u.id})">更新设置</button>
+                            </div>
                         </td>
                     </tr>`;
             });
         }
-        async function changeUserRole(id, newRole) {
-            if(!newRole) return;
-            await fetch('/api/users', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id, role: newRole}) });
-            alert("✅ 用户角色已更新！"); loadUsers();
+        
+        async function saveUserConfig(id) {
+            const newRole = document.getElementById(`role-${id}`).value;
+            const newPline = document.getElementById(`pline-${id}`).value;
+            await fetch('/api/users', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({id: id, role: newRole, product_line: newPline}) 
+            });
+            alert("✅ 用户角色与标签已成功更新！"); 
+            loadUsers();
         }
 
-        // --- 新增：系统Bug反馈工作流 ---
         async function loadFeedback() {
             const listContainer = document.getElementById('fbListContainer');
 
