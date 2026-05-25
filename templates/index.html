@@ -99,9 +99,8 @@
         th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--gt-border); }
         th { background: #fafafa; color: var(--gt-text-sub); font-weight: normal; font-size: 0.9rem; }
 
-        input[type="text"], input[type="number"], input[type="password"], select { border: 1px solid #d9d9d9;
-        border-radius: 4px; padding: 8px 12px; outline: none; transition: 0.2s; width: 100%; box-sizing: border-box; }
-        input:focus, select:focus { border-color: var(--gt-accent); box-shadow: 0 0 0 2px rgba(17, 82, 197, 0.1); }
+        input[type="text"], input[type="number"], input[type="password"], select, textarea { border: 1px solid #d9d9d9; border-radius: 4px; padding: 8px 12px; outline: none; transition: 0.2s; width: 100%; box-sizing: border-box; font-family: inherit; font-size: 0.95rem; }
+        input:focus, select:focus, textarea:focus { border-color: var(--gt-accent); box-shadow: 0 0 0 2px rgba(17, 82, 197, 0.1); }
 
         .btn { padding: 8px 16px; border-radius: 4px; border: 1px solid transparent; cursor: pointer; font-size: 0.9rem; transition: 0.2s; white-space: nowrap; }
         .btn-primary { background: var(--gt-accent); color: white; border-color: var(--gt-accent); }
@@ -150,7 +149,7 @@
         .order-card-body { padding: 16px; flex: 1; display: grid; gap: 10px; }
         .order-row { display: flex; font-size: 0.9rem; align-items: center; }
         .order-row .label { color: var(--gt-text-sub); width: 85px; flex-shrink: 0; }
-        .order-row .val { font-weight: 500; color: var(--gt-text-main); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .order-row .val { font-weight: 500; color: var(--gt-text-main); flex: 1; white-space: normal; overflow: break-word; text-overflow: break-all; }
         .order-row .val.blue { color: var(--gt-accent); font-weight: bold; }
         .order-actions { padding: 12px 16px; border-top: 1px solid var(--gt-border); display: flex; justify-content: flex-end; gap: 10px; background: white; flex-wrap: wrap; }
 
@@ -174,6 +173,9 @@
         .autocomplete-item { padding: 8px 12px; cursor: pointer; color: var(--gt-text-main); font-size: 0.9rem; }
         .autocomplete-item:hover { background-color: var(--gt-bg); color: var(--gt-accent); font-weight: bold; }
         .autocomplete-item span { color: var(--gt-text-sub); font-size: 0.8rem; margin-left: 8px; }
+        
+        /* Checkbox 美化 */
+        input[type="checkbox"].baseline-cb { width: 16px; height: 16px; cursor: pointer; accent-color: var(--gt-accent); vertical-align: middle; margin-right: 5px; }
     </style>
 </head>
 <body>
@@ -223,7 +225,7 @@
                 部件入库审批
             </div>
             
-            <div class="nav-item super-admin-only" onclick="showPanel('feedback', this)" style="display:none;">
+            <div class="nav-item" onclick="showPanel('feedback', this)">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                 系统Bug反馈
             </div>
@@ -264,7 +266,7 @@
                 </div>
                 <div class="card-container">
                     <div class="section-title"><span>标准订单基准库阅览</span></div>
-                    <table id="dashTplTable"><thead><tr><th>数控系统类型</th><th>结构概览</th><th>操作</th></tr></thead><tbody></tbody></table>
+                    <table id="dashTplTable"><thead><tr><th>数控系统类型</th><th>适用机床</th><th>操作</th></tr></thead><tbody></tbody></table>
                     <div class="pagination">
                         <button class="btn btn-outline btn-sm" id="btnPrev" onclick="prevPage()">上一页</button>
                         <span class="page-info" id="pageInfo">第 1 / 1 页</span>
@@ -293,23 +295,49 @@
                     <div style="font-weight: bold; margin-bottom: 10px; color:var(--gt-text-main); font-size:0.95rem;">② 基础属性定义</div>
                     <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin-bottom:20px;">
                         <div><input type="text" id="oMan" placeholder="制造商 (如: 西门子)"></div>
-                        <div><input type="text" id="oSer" placeholder="系统类型 (如: 840Dsl)"></div>
-                        <div><input type="text" id="oMac" placeholder="适用机床 (如: 五轴/镗铣)"></div>
+                        <div>
+                            <select id="oSer" style="width:100%; border:1px solid #d9d9d9; border-radius:4px; padding:8px 12px; height: 100%;">
+                                <option value="" disabled selected>系统类型 (必选)</option>
+                                <option value="A1">A1</option>
+                                
+                                <option value="A5">A5</option>
+                                <option value="B4">B4</option>
+                                <option value="BH">BH</option>
+                                <option value="BG">BG</option>
+                                <option value="BF">BF</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select id="oMac" style="width:100%; border:1px solid #d9d9d9; border-radius:4px; padding:8px 12px; height: 100%;">
+                                <option value="" disabled selected>适用机床 (必选)</option>
+                                <option value="立式加工中心">立式加工中心</option>
+                                <option value="龙门式铣床">龙门式铣床</option>
+                                <option value="卧式加工中心">卧式加工中心</option>
+                                <option value="落地式镗床">落地式镗床</option>
+                                <option value="刨台式镗床">刨台式镗床</option>
+                            </select>
+                        </div>
                     </div>
                     
                     <div style="border-top: 1px dashed var(--gt-border); padding-top: 20px; margin-bottom:20px;">
-                        <div style="font-weight: bold; margin-bottom: 10px; color:var(--gt-text-main); font-size:0.95rem;">③ 包含的部件明细录入</div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 10px; align-items:flex-end;">
+                            <div style="font-weight: bold; color:var(--gt-text-main); font-size:0.95rem;">③ 包含的部件明细录入</div>
+                            <div>
+                                <input type="file" id="orderExcelFile" style="display:none" accept=".xlsx, .xls" onchange="uploadOrderExcel()">
+                                <button class="btn btn-success btn-sm" onclick="document.getElementById('orderExcelFile').click()">📤 Excel 批量导入配置</button>
+                            </div>
+                        </div>
                         <table id="oCompTable">
-                            <thead><tr><th width="20%">部件分类</th><th>输入部件型号</th><th width="15%">数量</th><th width="15%">操作</th></tr></thead>
+                            <thead><tr><th>智能检索 (输入名称或编号自动匹配)</th><th width="15%">数量</th><th width="15%">操作</th></tr></thead>
                             <tbody>
                                 <tr>
                                     <td>
-                                        <select class="o-c" onchange="this.closest('tr').querySelector('.o-m').setAttribute('list', 'dl-' + this.value); this.closest('tr').querySelector('.o-m').value='';">
-                                            <option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他" selected>其他</option>
-                                        </select>
+                                        <div class="autocomplete-wrapper">
+                                            <input type="text" class="part-input" placeholder="输入名称或编号智能检索..." style="width:100%;" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
+                                            <div class="autocomplete-list"></div>
+                                        </div>
                                     </td>
-                                    <td><input type="text" class="o-m" list="dl-其他" placeholder="双击下拉或输入关键词筛选型号" style="width:100%;"></td>
-                                    <td><input type="number" class="o-qty" min="1" value="1" style="width:100%;"></td>
+                                    <td><input type="number" class="qty-input" min="1" value="1" style="width:100%;"></td>
                                     <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>
                                 </tr>
                             </tbody>
@@ -342,29 +370,49 @@
                     <div class="section-title">新增标准订单库模型</div>
                     
                     <div style="display:flex; gap:15px; margin-bottom:20px; align-items:center; width: 100%;">
-                        <input type="text" id="tNo" placeholder="基准单号 (未输入则自动生成)" style="flex: 1;">
-                        <input type="text" id="tName" placeholder="数控系统类型 (如 西门子840Dsl)" style="flex: 1;">
+                        <input type="text" id="tNo" placeholder="基准单号 (未填则自动生成)" style="flex: 1;">
+                        <select id="tName" style="flex: 1; border:1px solid #d9d9d9; border-radius:4px; padding:8px 12px;">
+                            <option value="" disabled selected>数控系统类型 (必选)</option>
+                            <option value="A1">A1</option>
+                            
+                            <option value="A5">A5</option>
+                            <option value="B4">B4</option>
+                            <option value="BH">BH</option>
+                            <option value="BG">BG</option>
+                            <option value="BF">BF</option>
+                        </select>
                         <input type="text" id="tErp" placeholder="ERP (申请后填写)" style="flex: 1;">
+                        <select id="tMac" style="flex: 1; border:1px solid #d9d9d9; border-radius:4px; padding:8px 12px;">
+                            <option value="" disabled selected>机床类型 (必选)</option>
+                            <option value="立式加工中心">立式加工中心</option>
+                            <option value="龙门式铣床">龙门式铣床</option>
+                            <option value="卧式加工中心">卧式加工中心</option>
+                            <option value="落地式镗床">落地式镗床</option>
+                            <option value="刨台式镗床">刨台式镗床</option>
+                        </select>
                     </div>
 
                     <div style="border-top: 1px dashed var(--gt-border); padding-top: 20px; margin-bottom:10px;">
-                        <div style="font-weight: bold; margin-bottom: 10px; color:var(--gt-text-main);">配置明细录入</div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 10px; align-items:flex-end;">
+                            <div style="font-weight: bold; color:var(--gt-text-main);">配置明细录入 <span style="font-size:0.8rem; color:var(--gt-text-sub); font-weight:normal; margin-left:10px;">*勾选“基准必选”后，新订单必须包含该部件才可匹配此基准。</span></div>
+                            <div>
+                                <input type="file" id="tplExcelFile" style="display:none" accept=".xlsx, .xls" onchange="uploadTplExcel()">
+                                <button class="btn btn-success btn-sm" onclick="document.getElementById('tplExcelFile').click()">📤 Excel 批量导入配置</button>
+                            </div>
+                        </div>
+                        
                         <table id="tCompTable">
-                            <thead><tr><th width="20%">部件分类</th><th>选择已入库部件型号</th><th width="15%">数量</th><th width="15%">操作</th></tr></thead>
+                            <thead><tr><th>智能检索 (输入名称或编号自动匹配)</th><th width="12%">数量</th><th width="15%">基准必选</th><th width="10%">操作</th></tr></thead>
                             <tbody>
                                 <tr>
                                     <td>
-                                        <select class="t-c" onchange="this.closest('tr').querySelector('.t-m').value='';">
-                                            <option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他" selected>其他</option>
-                                        </select>
-                                    </td>
-                                    <td>
                                         <div class="autocomplete-wrapper">
-                                            <input type="text" class="t-m" placeholder="输入关键字自动联想现有型号 (支持模糊搜索)" style="width:100%;" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
+                                            <input type="text" class="part-input" placeholder="输入关键字自动联想现有型号 (支持模糊搜索)" style="width:100%;" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
                                             <div class="autocomplete-list"></div>
                                         </div>
                                     </td>
-                                    <td><input type="number" class="t-qty" min="1" value="1" style="width:100%;"></td>
+                                    <td><input type="number" class="qty-input" min="1" value="1" style="width:100%;"></td>
+                                    <td><label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" class="baseline-cb" checked> 设为必选</label></td>
                                     <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>
                                 </tr>
                             </tbody>
@@ -377,7 +425,7 @@
                 </div>
                 <div class="card-container">
                     <div class="section-title">现有标准订单库列表</div>
-                    <table id="tplTable"><thead><tr><th>基准单号</th><th>数控系统类型</th><th>结构明细</th><th>操作</th></tr></thead><tbody></tbody></table>
+                    <table id="tplTable"><thead><tr><th>基准单号</th><th>数控系统类型</th><th>机床类型</th><th>包含部件数</th><th>操作</th></tr></thead><tbody></tbody></table>
                     <div class="pagination">
                         <button class="btn btn-outline btn-sm" id="btnPrevTplList" onclick="prevTplListPage()">上一页</button>
                         <span class="page-info" id="tplListPageInfo">第 1 / 1 页</span>
@@ -430,6 +478,7 @@
                     </div>
                 </div>
             </div>
+
             <div id="my-approvals" class="panel">
                 <div class="card-container">
                     <div class="section-title">我的待办审批列表</div>
@@ -453,7 +502,7 @@
             <div id="audit" class="panel">
                 <div class="card-container">
                     <div class="section-title">待办资产审批</div>
-                    <table id="audTable"><thead><tr><th>申请部件</th><th>分类</th><th>操作</th></tr></thead><tbody></tbody></table>
+                    <table id="audTable"><thead><tr><th>申请部件编号/名称</th><th>操作</th></tr></thead><tbody></tbody></table>
                 </div>
             </div>
 
@@ -468,13 +517,38 @@
             </div>
 
             <div id="feedback" class="panel">
-                <div class="card-container" id="fbListContainer" style="display:none;">
-                    <div class="section-title" id="fbListTitle">🗂️ 全部用户反馈池 (超级管理员处理台)</div>
+                <!-- 所有人可见的提交区域 (美化版) -->
+                <div class="card-container" style="max-width: 800px; margin-bottom: 30px;">
+                    <div class="section-title">📝 提交系统反馈 / Bug</div>
+                    
+                    <!-- 表单外框 -->
+                    <div style="background: #f8fafc; padding: 24px; border-radius: 8px; border: 1px solid var(--gt-border);">
+                        
+                        <div style="margin-bottom: 18px;">
+                            <div style="font-weight: bold; margin-bottom: 8px; font-size: 0.9rem; color: var(--gt-text-sub);">问题简述 <span style="color:var(--danger)">*</span></div>
+                            <input type="text" id="fbTitle" placeholder="例如：登录界面按钮无效，或者期望增加某个功能" style="padding: 10px 12px;">
+                        </div>
+                        
+                        <div style="margin-bottom: 24px;">
+                            <div style="font-weight: bold; margin-bottom: 8px; font-size: 0.9rem; color: var(--gt-text-sub);">详细描述 <span style="color:var(--danger)">*</span></div>
+                            <textarea id="fbContent" rows="6" placeholder="请详细描述您遇到的问题、操作步骤或改进建议... (支持回车换行)" style="padding: 12px; resize: vertical; line-height: 1.6;"></textarea>
+                        </div>
+                        
+                        <div style="text-align: right;">
+                            <button class="btn btn-primary" style="padding: 10px 28px; font-size: 1rem; letter-spacing: 1px;" onclick="submitFeedback()">🚀 确认提交反馈</button>
+                        </div>
+                        
+                    </div>
+                </div>
+
+                <!-- 列表区域：超管看全部，普通用户看自己的 -->
+                <div class="card-container" id="fbListContainer">
+                    <div class="section-title" id="fbListTitle">🗂️ 反馈处理池</div>
                     <table id="fbTable">
-                        <thead><tr><th width="12%">提交人</th><th width="20%">问题简述</th><th>详细内容</th><th width="12%">状态</th><th width="15%">操作</th></tr></thead>
+                        <thead><tr><th width="12%">提交人</th><th width="20%">问题简述</th><th>详细内容</th><th width="12%">状态</th><th width="15%">操作处理</th></tr></thead>
                         <tbody></tbody>
                     </table>
-                 </div>
+                </div>
             </div>
 
         </div>
@@ -522,18 +596,17 @@
     </div>
     
     <script>
-        const CORE_CATS = ["电机"];
         window.alert = function(msg) {
             document.getElementById('alertMessage').innerText = msg;
             document.getElementById('alertModal').classList.add('active');
         };
         
         let globalTplData = [], globalOrdersData = [], globalLibData = [];
+        let globalPublishedComps = [];
         let tplListCurrentPage = 1, tplListPageSize = 10; 
-        let orderCurrentPage = 1, orderPageSize = 6;  
+        let orderCurrentPage = 1, orderPageSize = 10;  
         let libCurrentPage = 1, libPageSize = 10;     
 
-        // 保存真实登录用户的状态
         let currentUser = null;
         let currentRole = null;
         let currentProductLine = null;
@@ -547,7 +620,6 @@
         }
         function closeModal(e) { if(e) e.preventDefault(); document.getElementById('globalModal').classList.remove('active'); }
 
-        // --- 登录体系 ---
         async function doLogin() {
             const u = document.getElementById('loginUser').value.trim();
             const p = document.getElementById('loginPwd').value.trim();
@@ -577,7 +649,6 @@
             document.getElementById('loginModal').style.display = 'flex';
         }
 
-        // 根据角色分配可见权限
         function applyUserRole() {
             let roleIcon = '👤';
             if(currentRole === '超级管理员') roleIcon = '👑';
@@ -585,7 +656,6 @@
             document.getElementById('currentUserSpan').innerText = `${roleIcon} ${currentRole} [${currentProductLine || '通用'}]：${currentUser}`;
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = (currentRole === '标准管理员' || currentRole === '超级管理员') ? 'flex' : 'none');
             document.querySelectorAll('.super-admin-only').forEach(el => el.style.display = (currentRole === '超级管理员') ? 'flex' : 'none');
-            // [修改] 独立审批界面仅展示给具有审批流转权限的人
             const isApprover = ['产品主管', '团队负责人', '产品线总师', '标准管理员', '超级管理员'].includes(currentRole);
             document.querySelectorAll('.approver-only').forEach(el => el.style.display = isApprover ? 'flex' : 'none');
 
@@ -594,9 +664,7 @@
             } else {
                 document.getElementById('createOrderPanel').style.display = 'none';
             }
-            
             document.getElementById('displayPline').innerText = currentProductLine || '通用';
-
             showPanel('dashboard', document.querySelectorAll('.nav-item')[0]);
         }
 
@@ -609,7 +677,7 @@
             if(id === 'orders') { orderCurrentPage = 1; loadOrders(); if(currentRole==='研发工程师'||currentRole==='超级管理员') fetchApprovers(); }
             if(id === 'templates') { tplListCurrentPage = 1; loadTemplatePage(); }
             if(id === 'library') { libCurrentPage = 1; loadLib(); }
-            if(id === 'my-approvals') { loadMyApprovals(); } // [新增] 加载属于我的待办数据
+            if(id === 'my-approvals') { loadMyApprovals(); } 
             if(id === 'audit') loadAudit();
             if(id === 'users') loadUsers();
             if(id === 'feedback') loadFeedback();
@@ -625,7 +693,6 @@
             leadSelect.innerHTML = data.leaders.length ? data.leaders.map(u => `<option value="${u}">${u}</option>`).join('') : '<option value="">无可用负责人</option>';
         }
 
-        // --- 同步获取并渲染侧边栏待审批工作流 ---
         async function loadSidebarPending() {
             if (!currentUser || !currentRole) return;
             const allowedRoles = ['产品主管', '团队负责人', '产品线总师', '标准管理员'];
@@ -634,11 +701,13 @@
                 return;
             }
             document.getElementById('sidebar-pending-area').style.display = 'flex';
+
             const res = await fetch(`/api/sidebar/pending?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}`);
             const orders = await res.json();
 
             const badge = document.getElementById('pending-badge');
             const list = document.getElementById('sidebar-orders-list');
+
             if (orders.length > 0) {
                 badge.innerText = orders.length;
                 badge.style.display = 'inline-block';
@@ -661,7 +730,6 @@
             document.getElementById('st-tpl').innerText = d.templates;
             document.getElementById('st-ord').innerText = d.orders || 0;
             document.getElementById('st-pen').innerText = d.pending;
-            // 刷新各项数据的同时，更新侧边栏待办提醒
             loadSidebarPending();
         }
 
@@ -683,12 +751,9 @@
             const tbody = document.querySelector('#dashTplTable tbody');
             tbody.innerHTML = '';
             pageData.forEach(t => {
-                let coreCount = 0, otherCount = 0;
-                Object.keys(t.data).forEach(k => {
-                    if(CORE_CATS.includes(k)) coreCount += (t.data[k] || []).length;
-                    else otherCount += (t.data[k] || []).length;
-                });
-                tbody.innerHTML += `<tr><td style="font-weight:bold; color:var(--gt-text-main);">${t.name}</td><td><span class="badge badge-blue">电机配置: ${coreCount} 项</span> <span class="badge badge-green">其他部件: ${otherCount} 项</span></td><td><a href="javascript:void(0)" onclick="showTplDetails(${t.id})" style="color:var(--gt-accent); text-decoration:none;">查看明细</a></td></tr>`;
+                let compCount = 0;
+                if (Array.isArray(t.data)) { compCount = t.data.length; } 
+                tbody.innerHTML += `<tr><td style="font-weight:bold; color:var(--gt-text-main);">${t.name}</td><td><span class="badge badge-blue">${t.applicable_machine || '通用'}</span></td><td><a href="javascript:void(0)" onclick="showTplDetails(${t.id})" style="color:var(--gt-accent); text-decoration:none;">查看明细 (${compCount}件)</a></td></tr>`;
             });
         }
         function prevPage() { if(dashTplCurrentPage > 1) { dashTplCurrentPage--; renderDashTplPage(); } }
@@ -697,55 +762,85 @@
         function showTplDetails(id) {
             const t = globalTplData.find(x => x.id === id);
             if(!t) return;
-            let coreHtml = '', otherHtml = '', coreCount = 0, otherCount = 0;
-            Object.keys(t.data).forEach(cat => {
-                if(t.data[cat] && t.data[cat].length > 0) {
-                    const counts = {};
-                    t.data[cat].forEach(mod => counts[mod] = (counts[mod] || 0) + 1);
-
-                    if(CORE_CATS.includes(cat)) {
-                        Object.entries(counts).forEach(([mod, qty]) => {
-                            let displayStr = qty > 1 ? `${mod} <span style="color:var(--gt-accent); font-weight:bold;">(×${qty})</span>` : mod;
-                            coreHtml += `<li style="margin-bottom:6px;"><span class="badge badge-blue" style="margin-right:8px; display:inline-block; width:120px; text-align:center;">${cat}</span>${displayStr}</li>`;
-                        });
-                        coreCount += t.data[cat].length;
-                    } else {
-                        Object.entries(counts).forEach(([mod, qty]) => {
-                            let displayStr = qty > 1 ? `${mod} <span style="color:var(--gt-accent); font-weight:bold;">(×${qty})</span>` : mod;
-                            otherHtml += `<li style="margin-bottom:6px;"><span class="badge badge-green" style="margin-right:8px; display:inline-block; width:120px; text-align:center;">${cat}</span>${displayStr}</li>`;
-                        });
-                        otherCount += t.data[cat].length;
-                    }
-                }
+            let listHtml = '';
+            const counts = {};
+            if (Array.isArray(t.data)) {
+                t.data.forEach(item => {
+                    let p = typeof item === 'string' ? item : item.part_no;
+                    let is_b = typeof item === 'string' ? false : item.is_baseline;
+                    let key = p + "|" + is_b;
+                    counts[key] = (counts[key] || 0) + 1;
+                });
+            }
+            Object.entries(counts).forEach(([key, qty]) => {
+                let [p, is_b_str] = key.split("|");
+                let is_b = is_b_str === 'true';
+                let comp = globalPublishedComps.find(c => c.part_no === p);
+                let displayStr = qty > 1 ? `${p} <span style="color:var(--gt-accent); font-weight:bold;">(×${qty})</span>` : p;
+                
+                listHtml += `<li style="margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; align-items:center; flex:1; min-width:0;">
+                        <span class="badge badge-green" style="margin-right:10px; display:inline-block; min-width:250px; max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center;" title="${comp ? comp.name : '未知名称'}">
+                            ${comp ? comp.name : '未知名称'}
+                        </span>
+                        <div style="font-family:monospace; color:#333;">${displayStr}</div>
+                    </div>
+                    ${is_b ? '<span class="badge badge-red" style="margin-left:10px; flex-shrink:0;">基准必选</span>' : ''}
+                </li>`;
             });
             
             let html = `
                 <div style="font-size:1.05rem; margin-bottom:15px;"><strong>【${t.name}】</strong> 结构明细：</div>
                 <div style="background:#f8fafc; padding:15px; border-radius:6px; border:1px solid var(--gt-border);">
                     <div style="font-size:1.05rem; font-weight:bold; color:var(--gt-accent); margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
-                        📊 架构概览：电机数量：${t.motor_count || 0} &nbsp;&nbsp;|&nbsp;&nbsp; 📦 ERP 编号：<span style="color:#fa8c16;">${t.erp_code || '未分配'}</span>
+                        📊 适用机床：<span style="color:#fa8c16;">${t.applicable_machine || '通用'}</span>
                     </div>
-                    <div style="font-weight:bold; color:var(--gt-text-main); margin-bottom:10px;">⚙️ 电机配置明细 (${coreCount}项)</div>
-                    <ul style="list-style:none; padding-left:10px; color:var(--gt-text-sub); margin-bottom:20px;">${coreHtml || '<li style="padding-left:135px;">暂无数据</li>'}</ul>
-                    <div style="font-weight:bold; color:#52c41a; margin-bottom:10px;">🔌 其他配置明细 (${otherCount}项)</div>
-                    <ul style="list-style:none; padding-left:10px; color:var(--gt-text-sub);">${otherHtml || '<li style="padding-left:135px;">暂无数据</li>'}</ul>
+                    <div style="font-weight:bold; color:var(--gt-text-main); margin-bottom:10px;">⚙️ 配置明细清单</div>
+                    <ul style="list-style:none; padding-left:10px; color:var(--gt-text-sub); margin-bottom:20px;">${listHtml || '<li style="padding-left:135px;">暂无数据</li>'}</ul>
                 </div>
             `;
             openModal('标准库模型明细', html);
         }
 
         // --- 订单管理工作流 ---
-        function addOrderCompRow() {
+        function addOrderCompRow(defaultPartNo = '', defaultQty = 1) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><select class="o-c" onchange="this.closest('tr').querySelector('.o-m').setAttribute('list', 'dl-' + this.value); this.closest('tr').querySelector('.o-m').value='';"><option value="电机">电机</option><option value="驱动">驱动</option><option value="系统">系统</option><option value="操作部件">操作部件</option><option value="电缆">电缆</option><option value="服务">服务</option><option value="手册">手册</option><option value="网络 / 连接配件">网络 / 连接配件</option><option value="电气安装辅件">电气安装辅件</option><option value="软件 / 功能授权">软件 / 功能授权</option><option value="其他" selected>其他</option></select></td><td><input type="text" class="o-m" list="dl-其他" placeholder="双击下拉或输入关键词筛选型号" style="width:100%;"></td><td><input type="number" class="o-qty" min="1" value="1" style="width:100%;"></td><td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>`;
+            tr.innerHTML = `
+                <td>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" class="part-input" placeholder="输入名称或编号智能检索..." style="width:100%;" value="${defaultPartNo}" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
+                        <div class="autocomplete-list"></div>
+                    </div>
+                </td>
+                <td><input type="number" class="qty-input" min="1" value="${defaultQty}" style="width:100%;"></td>
+                <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>`;
             document.querySelector('#oCompTable tbody').appendChild(tr);
         }
 
-        // [新增] 专门加载我的待审批列表数据
+        async function uploadOrderExcel() {
+            const fileInput = document.getElementById('orderExcelFile');
+            if(!fileInput.files[0]) return;
+            const formData = new FormData(); formData.append('file', fileInput.files[0]);
+            try {
+                const res = await fetch('/api/utils/parse_excel', { method: 'POST', body: formData });
+                const result = await res.json();
+                if (result.status === 'success') {
+                    result.data.forEach(item => addOrderCompRow(item.part_no, item.qty));
+                    alert(result.message + "\n\n订单明细已载入，请确认无误后点击下方【提交】。");
+                } else {
+                    alert("❌ 解析失败：" + result.message);
+                }
+            } catch (error) { 
+                alert("导入异常，请检查文件格式。"); 
+            } finally { 
+                fileInput.value = ''; 
+            }
+        }
+
         async function loadMyApprovals() {
             const url = `/api/orders?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}`;
             const allOrders = await (await fetch(url)).json();
-            globalOrdersData = allOrders; // 刷新全局数据供详情弹窗使用
+            globalOrdersData = allOrders; 
             
             let pendingOrders = [];
             if (currentRole === '产品主管') pendingOrders = allOrders.filter(o => o.status === '待主管审批' && o.supervisor === currentUser);
@@ -780,17 +875,9 @@
         }
 
         async function loadOrders() {
-            if (!document.getElementById('dl-container')) {
-                const comps = await(await fetch('/api/components?status=已发布')).json();
-                let dlContainer = document.createElement('div'); dlContainer.id = 'dl-container'; document.body.appendChild(dlContainer);
-                const cats = ["电机", "驱动", "系统", "操作部件", "电缆", "服务", "手册", "网络 / 连接配件", "电气安装辅件", "软件 / 功能授权", "其他"];
-                cats.forEach(cat => {
-                    const dl = document.createElement('datalist'); dl.id = 'dl-' + cat;
-                    comps.filter(c => c.category === cat).forEach(c => { dl.innerHTML += `<option value="${c.model}"></option>`; });
-                    dlContainer.appendChild(dl);
-                });
+            if(globalPublishedComps.length === 0) {
+                globalPublishedComps = await (await fetch('/api/components?status=已发布')).json();
             }
-
             const searchVal = document.getElementById('orderSearch').value.trim();
             const url = `/api/orders?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}&search=${encodeURIComponent(searchVal)}`;
             globalOrdersData = await(await fetch(url)).json();
@@ -818,7 +905,7 @@
             
             pageData.forEach(o => {
                 let matchText = o.matched_template;
-                if(o.match_score >= 0.1) matchText = `${o.matched_template} <span style="font-size:0.8rem; color:var(--gt-text-sub); margin-left:6px;">(${(o.match_score*100).toFixed(1)}%)</span>`;
+                if(o.match_score >= 0.1) matchText = o.matched_template;
 
                 let badgeCls = 'badge-blue';
                 if(o.status === '已驳回') badgeCls = 'badge-red';
@@ -846,19 +933,34 @@
                 if (currentRole === '超级管理员') {
                     actionHtml += `<button class="btn btn-danger btn-sm" style="background:#fff1f0; color:#f5222d; border-color:#ffa39e;" onclick="deleteOrder(${o.id})">🗑️</button>`;
                 }
+                else if (o.status === '待标准审批' && (currentRole === '标准管理员' || currentRole === '超级管理员')) {
+                    extraActionHtml = `<button class="btn btn-success" onclick="doOrderWorkflow(${o.id}, 'approve', '标准')">✔️ 确认通过</button> <button class="btn btn-danger" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回</button>`;
+                }
+                else if (o.status === '待定基准' && currentRole === '超级管理员') {
+                    extraActionHtml = `<button class="btn btn-success" style="background:#722ed1; border-color:#722ed1;" onclick="doOrderWorkflow(${o.id}, 'set_baseline')">🎯 建立基准</button> <button class="btn btn-outline" onclick="doOrderWorkflow(${o.id}, 'skip_baseline')">➡️ 特批流转</button> <button class="btn btn-danger" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回</button>`;
+                }
 
                 let msgHtml = '';
                 if(o.status === '已驳回' && o.reject_reason) {
-                    msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border);"><div class="label" style="color:var(--danger);">驳回原因</div><div class="val" style="color:var(--danger); white-space:normal; font-size:0.85rem;">${o.reject_reason}</div></div>`;
+                    msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border); align-items: flex-start;">
+                        <div class="label" style="color:var(--danger);">驳回原因</div>
+                        <div class="val" style="color:var(--danger); white-space:normal; font-size:0.85rem; max-height: 60px; overflow-y: auto;">${o.reject_reason}</div>
+                    </div>`;
                 } else if (o.status !== '待审批' && o.status !== '待主管审批' && o.status !== '待负责人审批' && o.status !== '待总师审批' && o.status !== '已驳回' && o.status !== '待定基准' && o.approve_remark) {
-                    msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border);"><div class="label" style="color:var(--success);">审批备注</div><div class="val" style="color:var(--success); white-space:normal; font-size:0.85rem;">${o.approve_remark}</div></div>`;
+                    msgHtml = `<div class="order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--gt-border); align-items: flex-start;">
+                        <div class="label" style="color:var(--success);">审批备注</div>
+                        <div class="val" style="color:var(--success); white-space:normal; font-size:0.85rem; max-height: 60px; overflow-y: auto;">${o.approve_remark}</div>
+                    </div>`;
                 }
+
+                // 【核心修改点】判断状态，如果未完成则隐藏单号
+                let displayNo = o.status === '已完成' ? o.order_no : '审批中 (暂无编号)';
 
                 grid.innerHTML += `
                     <div class="order-card">
                         <div class="order-card-header">
                             <div style="font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-                                <span>${o.order_no}</span>
+                                <span>${displayNo}</span>
                                 <span class="badge ${badgeCls}">${o.status}</span>
                             </div>
                             <span class="order-badge-manuf" title="${o.manufacturer || '未知'}">${o.manufacturer || '未知'}</span>
@@ -867,7 +969,6 @@
                             <div class="order-row"><div class="label">建单人员</div><div class="val">${o.applicant || '-'}</div></div>
                             <div class="order-row"><div class="label">适用机床</div><div class="val blue">${o.applicable_machine}</div></div>
                             <div class="order-row"><div class="label">系统类型</div><div class="val">${o.series}</div></div>
-                            <div class="order-row"><div class="label">流转总师</div><div class="val">${o.chief}</div></div>
                             <div class="order-row"><div class="label">基准匹配</div><div class="val blue" title="${o.matched_template}">${matchText}</div></div>
                             ${msgHtml}
                         </div>
@@ -927,18 +1028,15 @@
             closeCustomPrompt();
             await fetch('/api/orders/workflow', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             
-            // [修改] 根据用户当前所处面板，刷新对应数据
             loadStats();
             if (document.getElementById('my-approvals').classList.contains('active')) {
                 loadMyApprovals();
-                // 若弹窗打开状态，需关闭弹窗，因为状态已改变
                 closeModal(); 
             } else {
                 loadOrders();
             }
         };
 
-        // 4步全景智能弹窗渲染
         function showOrderDetails(id) {
             const o = globalOrdersData.find(x => x.id === id);
             if(!o) return;
@@ -970,10 +1068,13 @@
             if(o.components && o.components.length > 0) {
                 const formatArr = (arr) => {
                     const cnt = {};
-                    arr.forEach(i => cnt[i.model] = {cat: i.category, q: (cnt[i.model]?.q||0)+1});
-                    return Object.entries(cnt).map(([k,v]) => `<tr><td><span class="badge ${CORE_CATS.includes(v.cat)?'badge-blue':'badge-green'}">${v.cat}</span></td><td style="font-weight:bold;">${k} ${v.q>1 ? `<span style="color:var(--gt-accent); font-weight:bold;">(×${v.q})</span>` : ''}</td></tr>`).join('');
+                    arr.forEach(i => cnt[i] = (cnt[i]||0)+1);
+                    return Object.entries(cnt).map(([p,q]) => {
+                        let comp = globalPublishedComps.find(c => c.part_no === p);
+                        return `<tr><td>${comp?comp.manufacturer:'-'}</td><td>${comp?comp.name:'-'}</td><td style="font-family:monospace; color:#fa8c16;">${p}</td><td><strong>${q}</strong></td></tr>`;
+                    }).join('');
                 };
-                compHtml = `<table style="margin-top:10px; margin-bottom:20px;"><thead><tr><th width="30%">部件分类</th><th>型号明细</th></tr></thead><tbody>` + formatArr(o.components) + `</tbody></table>`;
+                compHtml = `<table style="margin-top:10px; margin-bottom:20px;"><thead><tr><th>制造商</th><th>部件名称</th><th>部件编号</th><th>数量</th></tr></thead><tbody>` + formatArr(o.components) + `</tbody></table>`;
             } else { compHtml = `<div style="color:var(--gt-text-sub); margin-top:10px; margin-bottom:20px; text-align:center; padding:15px; background:#fafafa; border-radius:4px;">暂无部件明细录入</div>`;
             }
 
@@ -987,11 +1088,10 @@
                 const addsStr = o.match_adds.length ? formatArr(o.match_adds).join('<br>') : '无需增配，完全满足';
                 const rmsStr  = o.match_rms.length  ? '<del>' + formatArr(o.match_rms).join('</del><br><del>') + '</del>' : '无冗余部件';
 
-                diffHtml = `<div style="font-weight:bold; border-bottom:2px solid var(--gt-border); padding-bottom:8px; margin-bottom:10px; color:var(--gt-accent);">🎯 智能对比：与基准单【${o.matched_template}】差异分析</div><div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;"><div style="background:#f6ffed; border:1px solid #b7eb8f; padding:15px; border-radius:6px;"><strong style="color:var(--success);">[➕ 需在基准上新增配置]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${addsStr}</div></div><div style="background:#fff1f0; border:1px solid #ffccc7; padding:15px; border-radius:6px;"><strong style="color:var(--danger);">[➖ 需从基准中剔除冗余]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${rmsStr}</div></div></div>`;
+                diffHtml = `<div style="font-weight:bold; border-bottom:2px solid var(--gt-border); padding-bottom:8px; margin-bottom:10px; color:var(--gt-accent);">🎯 智能对比：与基准单【${o.matched_template}】编号差异分析</div><div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;"><div style="background:#f6ffed; border:1px solid #b7eb8f; padding:15px; border-radius:6px;"><strong style="color:var(--success);">[➕ 需在基准上新增配置]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${addsStr}</div></div><div style="background:#fff1f0; border:1px solid #ffccc7; padding:15px; border-radius:6px;"><strong style="color:var(--danger);">[➖ 需从基准中剔除冗余]</strong><div style="margin-top:10px; color:#555; line-height:1.6;">${rmsStr}</div></div></div>`;
             } else { diffHtml = `<div style="margin-top:20px; padding:15px; background:#fff1f0; border:1px solid #ffccc7; border-radius:6px; color:var(--danger); font-weight:bold; text-align:center;">⚠️ 本单录入的明细与现有所有基准差异过大，无匹配参考，建议纳入新定制单。</div>`;
             }
 
-            // [新增] 动态追加操作按钮，方便用户在详情页直接审批
             let extraActionHtml = '';
             if (o.status === '待主管审批' && (currentUser === o.supervisor || currentRole === '超级管理员')) {
                 extraActionHtml = `<button class="btn btn-success" onclick="doOrderWorkflow(${o.id}, 'approve', '主管')">✔️ 准许流转</button> <button class="btn btn-danger" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回</button>`;
@@ -1003,9 +1103,20 @@
                 extraActionHtml = `<button class="btn btn-success" style="background:#722ed1; border-color:#722ed1;" onclick="doOrderWorkflow(${o.id}, 'set_baseline')">🎯 建立基准</button> <button class="btn btn-outline" onclick="doOrderWorkflow(${o.id}, 'skip_baseline')">➡️ 特批流转</button> <button class="btn btn-danger" onclick="doOrderWorkflow(${o.id}, 'reject')">❌ 驳回</button>`;
             }
 
+            // 根据是否以 TMP- 开头动态生成单号显示内容
+            let displayNo = o.order_no.startsWith('TMP-') ? '审批中 (暂无编号)' : o.order_no;
+
             let html = `
                 ${progressHtml}
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:6px; font-size:0.9rem;"><div><span style="color:var(--gt-text-sub)">订单号：</span> <strong>${o.order_no}</strong></div><div><span style="color:var(--gt-text-sub)">制造商：</span> ${o.manufacturer}</div><div><span style="color:var(--gt-text-sub)">当前状态：</span> <strong style="color:var(--gt-accent)">${o.status}</strong></div><div><span style="color:var(--gt-text-sub)"系统类型：</span> ${o.series}</div><div><span style="color:var(--gt-text-sub)">适用机床：</span> ${o.applicable_machine}</div><div><span style="color:var(--gt-text-sub)">创建时间：</span> ${o.created_at}</div></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:6px; font-size:0.9rem;">
+                    <div><span style="color:var(--gt-text-sub)">订单号：</span> <strong>${displayNo}</strong></div>
+                    <div><span style="color:var(--gt-text-sub)">制造商：</span> ${o.manufacturer}</div>
+                    <div><span style="color:var(--gt-text-sub)">当前状态：</span> <strong style="color:var(--gt-accent)">${o.status}</strong></div>
+                    <!-- 下面这行补上了缺失的 > 符号 -->
+                    <div><span style="color:var(--gt-text-sub)">系统类型：</span> ${o.series}</div>
+                    <div><span style="color:var(--gt-text-sub)">适用机床：</span> ${o.applicable_machine}</div>
+                    <div><span style="color:var(--gt-text-sub)">创建时间：</span> ${o.created_at}</div>
+                </div>
                 <div style="font-weight:bold; border-bottom:2px solid var(--gt-border); padding-bottom:8px;">包含的硬件清单：</div>
                 ${compHtml}
                 ${diffHtml}
@@ -1016,18 +1127,18 @@
                     <button class="btn btn-outline" onclick="window.location.href='/api/orders/${o.id}/export'">⬇️ 导出完整 BOM单 (Excel)</button>
                 </div>
             `;
-            openModal('数控订单全景智能分析', html, footerHtml);
+            openModal('数控订单全景分析', html, footerHtml);
         }
 
         async function submitOrder() {
             const man = document.getElementById('oMan').value.trim();
-            const ser = document.getElementById('oSer').value.trim();
-            const mac = document.getElementById('oMac').value.trim();
+            const ser = document.getElementById('oSer').value;
+            const mac = document.getElementById('oMac').value;
             const sup = document.getElementById('oSupervisor').value;
             const lead = document.getElementById('oLeader').value;
             
             if (!man || !ser || !mac) {
-                return alert("⚠️ 提交失败：请将【制造商】、【系统类型】和【适用机床】填写完整！");
+                return alert("⚠️ 提交失败：请将【制造商】填写完整，并选择【系统类型】和【适用机床】！");
             }
             if (!sup || !lead) {
                 return alert("⚠️ 提交失败：此产品线下没有完整的主管或负责人配置，无法发起审批工作流！");
@@ -1035,34 +1146,40 @@
 
             const comps = [];
             document.querySelectorAll('#oCompTable tbody tr').forEach(tr => {
-                const mod = tr.querySelector('.o-m').value.trim();
-                const qtyInput = tr.querySelector('.o-qty');
+                const mod = tr.querySelector('.part-input').value.trim();
+                const qtyInput = tr.querySelector('.qty-input');
                 const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
                 if(mod) {
                     for(let i=0; i<qty; i++) {
-                        comps.push({category: tr.querySelector('.o-c').value, model: mod});
+                        comps.push(mod);
                     }
                 }
             });
+            
             if (comps.length === 0) {
                 return alert("⚠️ 提交失败：订单不能是空壳，请至少录入一项有效的【部件明细】！");
             }
 
-            const publishedComps = await (await fetch('/api/components?status=已发布')).json();
-            const validModels = publishedComps.map(c => c.model);
+            // 1. 确保全局字典已加载
+            if(globalPublishedComps.length === 0) {
+                globalPublishedComps = await (await fetch('/api/components?status=已发布')).json();
+            }
+            // 修复：使用 c.part_no 而不是 part_no
+            const validModels = globalPublishedComps.map(c => c.part_no);
 
-            for (let c of comps) {
-                if (!validModels.includes(c.model)) {
-                    return alert(`⚠️ 提交失败：系统库中不存在部件【${c.model}】！\n\n请先前往“数控部件列表”中手动添加该部件，并在审核发布后再来建单。`);
-                }
+            // 2. 核心修改：一次性找出所有未入库的部件编号
+            const missingParts = comps.filter(p => !validModels.includes(p));
+            
+            if (missingParts.length > 0) {
+                // 使用 Set 去重，让弹窗更清晰
+                const uniqueMissing = [...new Set(missingParts)];
+                return alert(`⚠️ 提交失败：以下部件未在系统库中入库，请先前往"部件管理"添加：\n\n${uniqueMissing.join('，')}`);
             }
 
-            const autoMotCount = comps.filter(c => c.category === '电机').length;
+            // 3. 提交请求
             const payload = {
                 manufacturer: man,
                 series: ser,
-                motor_count: autoMotCount, 
-                drive_count: comps.filter(c => c.category === '驱动').length,
                 applicable_machine: mac,
                 applicant: currentUser, 
                 product_line: currentProductLine,
@@ -1070,23 +1187,27 @@
                 team_leader: lead,
                 components: comps
             };
-            await fetch('/api/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
 
-            document.querySelectorAll('#oCompTable tbody tr').forEach((tr, i) => {
-                if(i > 0) tr.remove();
-                else {
-                    tr.querySelector('.o-m').value = '';
-                    tr.querySelector('.o-qty').value = '1';
-                }
+            const response = await fetch('/api/orders', { 
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify(payload) 
             });
-            document.getElementById('oMan').value = '';
-            document.getElementById('oSer').value = '';
-            document.getElementById('oMac').value = '';
-
-            loadOrders();
-            loadStats();
-
-            alert("✅ 订单提交成功！已流转至【产品主管】进行初审。");
+            const res = await response.json();
+            
+            if (res.status === 'success') {
+                alert("✅ 订单提交成功！已流转至【产品主管】进行初审。");
+                // 清空表单
+                document.getElementById('oMan').value = '';
+                document.getElementById('oSer').value = '';
+                document.getElementById('oMac').value = '';
+                document.querySelector('#oCompTable tbody').innerHTML = '';
+                addOrderCompRow();
+                loadOrders();
+                loadStats();
+            } else {
+                alert("❌ 提交失败：" + res.message);
+            }
         }
 
         async function deleteOrder(id) {
@@ -1106,35 +1227,49 @@
             }
         }
 
-        function addTplCompRow(defaultCat = '其他', defaultMod = '', defaultQty = 1) {
+        function addTplCompRow(defaultPartNo = '', defaultQty = 1, isBaseline = true) {
             const tr = document.createElement('tr');
-            const cats = ["电机", "驱动", "系统", "操作部件", "电缆", "服务", "手册", "网络 / 连接配件", "电气安装辅件", "软件 / 功能授权", "其他"];
-            const optionsHtml = cats.map(c => `<option value="${c}" ${c === defaultCat ? 'selected' : ''}>${c}</option>`).join('');
             tr.innerHTML = `
                 <td>
-                    <select class="t-c" onchange="this.closest('tr').querySelector('.t-m').value='';">
-                        ${optionsHtml}
-                    </select>
-                </td>
-                <td>
                     <div class="autocomplete-wrapper">
-                        <input type="text" class="t-m" placeholder="输入关键字自动联想现有型号 (支持模糊搜索)" style="width:100%;" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
+                        <input type="text" class="part-input" placeholder="输入名称或编号智能检索..." style="width:100%;" value="${defaultPartNo}" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
                         <div class="autocomplete-list"></div>
                     </div>
                 </td>
-                <td><input type="number" class="t-qty" min="1" value="${defaultQty}" style="width:100%;"></td>
+                <td><input type="number" class="qty-input" min="1" value="${defaultQty}" style="width:100%;"></td>
+                <td><label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox" class="baseline-cb" ${isBaseline ? 'checked' : ''}> 设为必选</label></td>
                 <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">移除</button></td>`;
             document.querySelector('#tCompTable tbody').appendChild(tr);
+        }
+
+       async function uploadTplExcel() {
+            const fileInput = document.getElementById('tplExcelFile');
+            if(!fileInput.files[0]) return;
+            const formData = new FormData(); formData.append('file', fileInput.files[0]);
+            try {
+                const res = await fetch('/api/utils/parse_excel', { method: 'POST', body: formData });
+                const result = await res.json();
+                if (result.status === 'success') {
+                    result.data.forEach(item => addTplCompRow(item.part_no, item.qty, item.is_baseline));
+                    // 【修改点】使用后端传来的 message，里面包含了哪些部件没在库里被跳过的信息
+                    alert(result.message + "\n\n请确认明细无误后点击下方【保存】按钮入库。");
+                } else {
+                    alert("❌ 解析失败：" + result.message);
+                }
+            } catch (error) { 
+                alert("导入异常，请检查文件格式。"); 
+            } finally { 
+                fileInput.value = ''; 
+            }
         }
 
         function showSuggestions(inputEl) {
             const val = inputEl.value.trim().toLowerCase();
             const listEl = inputEl.nextElementSibling;
-            const cat = inputEl.closest('tr').querySelector('.t-c').value; 
-
+            
             if (globalPublishedComps.length === 0) return;
             let matches = globalPublishedComps.filter(c =>
-                c.category === cat && c.model.toLowerCase().includes(val)
+                (c.name && c.name.toLowerCase().includes(val)) || (c.part_no && c.part_no.toLowerCase().includes(val))
             );
             if (matches.length === 0) {
                 listEl.style.display = 'none';
@@ -1145,9 +1280,9 @@
             matches.forEach(m => {
                 const item = document.createElement('div');
                 item.className = 'autocomplete-item';
-                item.innerHTML = `${m.model} <span>(${m.remark || '无备注'})</span>`;
+                item.innerHTML = `<strong>${m.part_no}</strong> <span>(${m.name} - ${m.manufacturer})</span>`;
                 item.onclick = function() {
-                    inputEl.value = m.model;
+                    inputEl.value = m.part_no;
                     listEl.style.display = 'none';
                 };
                 listEl.appendChild(item);
@@ -1156,13 +1291,15 @@
         }
 
         document.addEventListener('click', function(e) {
-            if (!e.target.classList.contains('t-m')) {
+            if (!e.target.classList.contains('part-input')) {
                 document.querySelectorAll('.autocomplete-list').forEach(l => l.style.display = 'none');
             }
         });
 
         async function loadTemplatePage() {
-            globalPublishedComps = await(await fetch('/api/components?status=已发布')).json();
+            if(globalPublishedComps.length === 0) {
+                globalPublishedComps = await(await fetch('/api/components?status=已发布')).json();
+            }
             const res = await fetch('/api/templates');
             globalTplData = await res.json();
             tplListCurrentPage = 1;
@@ -1174,7 +1311,7 @@
             tbody.innerHTML = '';
 
             if (globalTplData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--gt-text-sub); padding:20px;">暂无标准库数据</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gt-text-sub); padding:20px;">暂无标准库数据</td></tr>`;
                 document.getElementById('tplListPageInfo').innerText = `第 1 / 1 页`;
                 document.getElementById('btnPrevTplList').disabled = true;
                 document.getElementById('btnNextTplList').disabled = true;
@@ -1187,12 +1324,6 @@
             document.getElementById('btnNextTplList').disabled = tplListCurrentPage === totalPages;
             const pageData = globalTplData.slice((tplListCurrentPage - 1) * tplListPageSize, tplListCurrentPage * tplListPageSize);
             pageData.forEach(t => {
-                let coreCount = 0, otherCount = 0;
-                Object.keys(t.data).forEach(k => {
-                    if(CORE_CATS.includes(k)) coreCount += (t.data[k] || []).length;
-                    else otherCount += (t.data[k] || []).length;
-                });
-
                 let actionHtml = `<button class="btn btn-outline btn-sm" onclick="showTplDetails(${t.id})">详情</button>`;
                 if (currentRole === '超级管理员') {
                     actionHtml += ` <button class="btn btn-primary btn-sm" onclick="editTpl(${t.id})">✏️ 编辑</button>`;
@@ -1202,9 +1333,9 @@
                 tbody.innerHTML += `<tr>
                     <td style="color:var(--gt-text-sub);">${t.no}</td>
                     <td style="font-weight:bold; color:var(--gt-text-main);">${t.name}</td>
+                    <td><span class="badge badge-blue" style="background:transparent; border-color:#d9d9d9; color:#666;">${t.applicable_machine || '-'}</span></td>
                     <td>
-                        <span class="badge badge-blue">电机数量: ${t.motor_count || 0}</span>
-                        <span class="badge badge-green" style="background:#f6ffed; border-color:#d9d9d9; color:#666;">总部件: ${(coreCount + otherCount) || 0}</span>
+                        <span class="badge badge-green" style="background:#f6ffed; border-color:#d9d9d9; color:#666;">总部件: ${t.data.length || 0}</span>
                     </td>
                     <td>${actionHtml}</td>
                 </tr>`;
@@ -1220,74 +1351,82 @@
             currentEditTplId = id;
             document.getElementById('tNo').value = t.no;
             document.getElementById('tName').value = t.name;
-            document.getElementById('tErp').value = t.erp_code || '';
+            document.getElementById('tMac').value = t.applicable_machine || '';
 
             const btn = document.getElementById('saveTplBtn');
             btn.innerHTML = '💾 保存基准修改';
             btn.className = 'btn btn-success';
 
             document.querySelector('#tCompTable tbody').innerHTML = '';
-            let hasData = false;
-            Object.keys(t.data).forEach(cat => {
-                if(t.data[cat] && t.data[cat].length > 0) {
-                    const counts = {};
-                    t.data[cat].forEach(mod => counts[mod] = (counts[mod] || 0) + 1);
-                    Object.entries(counts).forEach(([mod, qty]) => {
-                        addTplCompRow(cat, mod, qty);
-                        hasData = true;
-                    });
-                }
+            
+            const counts = {}; 
+            t.data.forEach(item => {
+                let p = typeof item === 'string' ? item : item.part_no;
+                let is_b = typeof item === 'string' ? false : item.is_baseline;
+                let key = p + "|" + is_b;
+                counts[key] = (counts[key] || 0) + 1;
             });
-            if(!hasData) addTplCompRow();
+
+            Object.entries(counts).forEach(([key, q]) => {
+                let [p, is_b_str] = key.split("|");
+                addTplCompRow(p, q, is_b_str === 'true');
+            });
+            if(Object.keys(counts).length===0) addTplCompRow();
 
             document.querySelector('.content-area').scrollTo({top: 0, behavior: 'smooth'});
         }
-       let currentEditTplId = null;
+
+        let currentEditTplId = null;
         async function saveTemplate() {
-            const name = document.getElementById('tName').value.trim();
+            const name = document.getElementById('tName').value;
             const no = document.getElementById('tNo').value.trim();
-            const erp = document.getElementById('tErp').value.trim(); 
+            const mac = document.getElementById('tMac').value; 
 
             if(!name) { 
-                document.getElementById('alertMessage').innerText = '⚠️ 请输入数控系统类型！系统将据此自动生成编号。';
+                document.getElementById('alertMessage').innerText = '⚠️ 请选择数控系统类型！系统将据此自动生成编号。';
+                document.getElementById('alertModal').classList.add('active');
+                return;
+            }
+            if(!mac) { 
+                document.getElementById('alertMessage').innerText = '⚠️ 请选择适用机床类型！这是必选项。';
                 document.getElementById('alertModal').classList.add('active');
                 return;
             }
 
-            const comps = {
-                "电机": [], "驱动": [], "系统": [], "操作部件": [], "电缆": [],
-                "服务": [], "手册": [], "网络 / 连接配件": [], "电气安装辅件": [], "软件 / 功能授权": [], "其他": []
-            };
+            const comps = []; 
             document.querySelectorAll('#tCompTable tbody tr').forEach(tr => {
-                const cat = tr.querySelector('.t-c').value;
-                const mod = tr.querySelector('.t-m').value.trim();
-                const qtyInput = tr.querySelector('.t-qty');
+                const mod = tr.querySelector('.part-input').value.trim();
+                const qtyInput = tr.querySelector('.qty-input');
                 const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+                const is_b = tr.querySelector('.baseline-cb') ? tr.querySelector('.baseline-cb').checked : false;
                 
-                if(mod && comps[cat] !== undefined) {
+                if(mod) {
                     for(let i=0; i<qty; i++) {
-                        comps[cat].push(mod);
+                        comps.push({ part_no: mod, is_baseline: is_b });
                     }
                 }
             });
-            const publishedComps = await (await fetch('/api/components?status=已发布')).json();
-            const validModels = publishedComps.map(c => c.model);
-            const allEnteredModels = Object.values(comps).flat();
-            for (let mod of allEnteredModels) {
-                if (!validModels.includes(mod)) {
-                    return alert(`⚠️ 保存失败：系统库中不存在部件【${mod}】！\n\n请先前往“数控部件列表”中添加并发布该部件。`);
+            
+            if(globalPublishedComps.length === 0) {
+                globalPublishedComps = await (await fetch('/api/components?status=已发布')).json();
+            }
+            // 修复：使用 c.part_no 而不是 part_no
+            const validModels = globalPublishedComps.map(c => c.part_no);
+            
+            for (let item of comps) {
+                if (!validModels.includes(item.part_no)) {
+                    return alert(`⚠️ 保存失败：系统库中不存在编号为【${item.part_no}】的部件！\n\n请先前往"数控部件列表"中添加入库。`);
                 }
             }
 
-            const autoMotCount = comps["电机"].length;
             const payload = {
                 id: currentEditTplId,
                 no: no,
                 name: name,
-                erp_code: erp, 
-                motor_count: autoMotCount, 
+                applicable_machine: mac,
                 components: comps
             };
+            
             const res = await fetch('/api/templates', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             const data = await res.json();
             if (data.status === 'error') return alert("❌ 保存失败：" + data.message);
@@ -1300,18 +1439,13 @@
 
             document.getElementById('tName').value = '';
             document.getElementById('tNo').value = '';
-            document.getElementById('tErp').value = '';
-            document.querySelectorAll('#tCompTable tbody tr').forEach((tr, i) => {
-                if(i>0) tr.remove();
-                else {
-                    tr.querySelector('.t-m').value='';
-                    tr.querySelector('.t-qty').value='1'; 
-                }
-            });
+            document.getElementById('tMac').value = '';
+            
+            document.querySelector('#tCompTable tbody').innerHTML = ''; 
+            addTplCompRow();
 
             loadTemplatePage(); loadStats();
         }
-
         async function delT(id) {
             if(!confirm("确定删除该标准库模型吗？")) return;
             await fetch(`/api/templates?id=${id}`, {method:'DELETE'});
@@ -1331,7 +1465,6 @@
             } catch (error) { alert("导入异常，请检查文件格式。"); } finally { fileInput.value = ''; }
         }
 
-        // ================= [修改开始] 极简版 - 提交部件入库申请 =================
         async function submitApply() {
             const man = document.getElementById('lMan').value.trim();
             const name = document.getElementById('lName').value.trim();
@@ -1364,18 +1497,14 @@
                 alert("❌ 网络异常，提交失败。");
             }
         }
-        // ================= [修改结束] =================
 
-        // ================= [修改开始] 极简版 - 重置检索 =================
         function resetLibSearch() { 
             document.getElementById('searchMan').value = ''; 
             document.getElementById('searchName').value = ''; 
             document.getElementById('searchPartNo').value = ''; 
             loadLib(); 
         }
-        // ================= [修改结束] =================
 
-        // ================= [修改开始] 极简版 - 动态加载与检索 =================
         async function loadLib() {
             let url = '/api/components?';
             const man = document.getElementById('searchMan').value.trim(); 
@@ -1390,15 +1519,13 @@
             libCurrentPage = 1;
             renderLibPage();
         }
-        // ================= [修改结束] =================
 
-        // ================= [修改开始] 极简版 - 渲染部件表格 =================
         function renderLibPage() {
             const b = document.querySelector('#libTable tbody');
             b.innerHTML = '';
 
             if(globalLibData.length === 0) {
-                b.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--gt-text-sub); padding:20px;">没有找到符合条件的部件数据</td></tr>`;
+                b.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gt-text-sub); padding:20px;">没有找到符合条件的部件数据</td></tr>`;
                 document.getElementById('libPageInfo').innerText = `第 1 / 1 页`;
                 document.getElementById('btnPrevLib').disabled = true;
                 document.getElementById('btnNextLib').disabled = true;
@@ -1428,7 +1555,6 @@
                 </tr>`;
             });
         }
-        // ================= [修改结束] =================
         
         function prevLibPage() { if(libCurrentPage > 1) { libCurrentPage--; renderLibPage(); } }
         function nextLibPage() { if(libCurrentPage < Math.ceil(globalLibData.length / libPageSize)) { libCurrentPage++; renderLibPage(); } }
@@ -1454,7 +1580,7 @@
             const comps = await(await fetch('/api/components?status=待审核')).json();
             const b = document.querySelector('#audTable tbody'); b.innerHTML = '';
             if(comps.length === 0) b.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--gt-text-sub)">目前暂无待办任务</td></tr>`;
-            comps.forEach(c => b.innerHTML += `<tr><td style="color:var(--gt-accent); font-weight:bold;">${c.model}</td><td>${c.category}</td><td><button class="btn btn-outline btn-sm" onclick="doAudit(${c.id})">✓ 准许入库</button></td></tr>`);
+            comps.forEach(c => b.innerHTML += `<tr><td style="color:var(--gt-accent); font-weight:bold;">${c.part_no}</td><td>${c.name}</td><td><button class="btn btn-outline btn-sm" onclick="doAudit(${c.id})">✓ 准许入库</button></td></tr>`);
         }
         async function doAudit(id) { await fetch('/api/components/audit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, action:'已发布'}) });
         loadAudit(); loadStats(); }
@@ -1513,18 +1639,24 @@
 
         async function loadFeedback() {
             const listContainer = document.getElementById('fbListContainer');
-            if (currentRole !== '超级管理员') {
-                listContainer.style.display = 'none';
-                return; 
+            const titleEl = document.getElementById('fbListTitle');
+            
+            // 动态设置标题
+            if (currentRole === '超级管理员') {
+                titleEl.innerText = '🗂️ 全部用户反馈池 (超级管理员处理台)';
+            } else {
+                titleEl.innerText = '🗂️ 我的历史反馈记录';
             }
 
             listContainer.style.display = 'block';
+
             const res = await fetch(`/api/feedback?username=${encodeURIComponent(currentUser)}&role=${encodeURIComponent(currentRole)}`);
             const data = await res.json();
             const b = document.querySelector('#fbTable tbody');
             b.innerHTML = '';
+            
             if (data.length === 0) {
-                b.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gt-text-sub); padding:20px;">暂无待处理的反馈</td></tr>`;
+                b.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gt-text-sub); padding:20px;">暂无反馈记录</td></tr>`;
                 return;
             }
 
@@ -1532,8 +1664,13 @@
                 let badgeClass = f.status === '已解决' ? 'badge-green' : 'badge-orange';
                 let actionHtml = '-';
                 
-                if (f.status === '待处理') {
+                // 权限判定：只有超管且状态为"待处理"时，才显示"标记已解决"按钮
+                if (f.status === '待处理' && currentRole === '超级管理员') {
                     actionHtml = `<button class="btn btn-success btn-sm" onclick="resolveFeedback(${f.id})">✔️ 标记已解决</button>`;
+                } else if (f.status === '待处理') {
+                    actionHtml = '<span style="color:var(--warning); font-size:0.85rem;">等待处理</span>';
+                } else {
+                    actionHtml = '<span style="color:var(--success); font-size:0.85rem;">已处理完毕</span>';
                 }
 
                 b.innerHTML += `<tr>
@@ -1562,7 +1699,7 @@
                 body: JSON.stringify({ username: currentUser, title: title, content: content })
             });
             
-            alert("✅ 反馈提交成功！感谢您的建议，超管会尽快处理。");
+            alert("✅ 反馈提交成功！感谢您的建议，我们会尽快处理。");
             document.getElementById('fbTitle').value = '';
             document.getElementById('fbContent').value = '';
             loadFeedback();
