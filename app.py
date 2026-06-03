@@ -8,13 +8,12 @@ import string
 import io
 import pandas as pd
 from collections import Counter
-import random
 import time
-
+from sqlalchemy import or_
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 # [结构变更] 升级为 v20 数据库，彻底删除多余的部件属性字段，保持极致精简
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'gt_cnc_v21.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'gt_cnc_v25.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -37,6 +36,7 @@ class DictSystem(db.Model):
     manufacturer = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(50), unique=True, nullable=False)
     code = db.Column(db.String(10), nullable=False)
+
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -54,7 +54,7 @@ class Component(db.Model):
     manufacturer = db.Column(db.String(100), nullable=False) 
     name = db.Column(db.String(100), nullable=False)       
     part_no = db.Column(db.String(100), unique=True, nullable=False) 
-    
+    reject_reason = db.Column(db.String(255), default='')
     status = db.Column(db.String(20), default='待审核')
     created_at = db.Column(db.DateTime, default=datetime.now)
 
@@ -64,7 +64,7 @@ class StandardTemplate(db.Model):
     template_no = db.Column(db.String(50), unique=True, nullable=False)
     name = db.Column(db.String(100), unique=False, nullable=False)
     applicable_machine = db.Column(db.String(50), default='')
-    # 存储部件字典列表：[{"part_no": "P001", "is_baseline": True, "node_letter": "A", "node_desc": "主柜"}, ...]
+    status = db.Column(db.String(20), default='正常')
     components_json = db.Column(db.Text, nullable=False) 
     created_at = db.Column(db.DateTime, default=datetime.now)
 
@@ -107,6 +107,7 @@ def calculate_multiset_score(list_a, list_b):
     intersection = sum((count_a & count_b).values())
     union = sum((count_a | count_b).values())
     return intersection / union if union > 0 else 0
+
 def generate_business_no(order_type, sys_series_text, machine_type):
     # 1. 动态查询机床代码
     mac_obj = DictMachine.query.filter_by(name=machine_type).first()
@@ -148,30 +149,31 @@ def get_stats():
     u = request.args.get('username', '')
     r = request.args.get('role', '')
 
+    # 对各角色统计总数和待办时，均需剔除已删除的单据
     if r == '研发工程师':
-        orders = CncOrder.query.filter_by(applicant=u).count()
-        pending = CncOrder.query.filter_by(applicant=u).filter(CncOrder.status != '已完成').count()
+        orders = CncOrder.query.filter_by(applicant=u).filter(CncOrder.status != '已删除').count()
+        pending = CncOrder.query.filter_by(applicant=u).filter(~CncOrder.status.in_(['已完成', '已删除'])).count()
     elif r == '产品主管':
-        orders = CncOrder.query.filter_by(supervisor=u).count()
+        orders = CncOrder.query.filter_by(supervisor=u).filter(CncOrder.status != '已删除').count()
         pending = CncOrder.query.filter_by(supervisor=u, status='待主管审批').count()
     elif r == '团队负责人':
-        orders = CncOrder.query.filter_by(team_leader=u).count()
+        orders = CncOrder.query.filter_by(team_leader=u).filter(CncOrder.status != '已删除').count()
         pending = CncOrder.query.filter_by(team_leader=u, status='待负责人审批').count()
     elif r == '产品线总师':
-        orders = CncOrder.query.filter_by(chief=u).count()
+        orders = CncOrder.query.filter_by(chief=u).filter(CncOrder.status != '已删除').count()
         pending = CncOrder.query.filter_by(chief=u, status='待总师审批').count()
     elif r == '标准管理员':
-        # 【修改】标准管理员等同于超管，看所有单子，待办审批也看专属的
-        orders = CncOrder.query.count()
+        orders = CncOrder.query.filter(CncOrder.status != '已删除').count()
         pending = CncOrder.query.filter(CncOrder.status.in_(['待标准审批', '待定基准'])).count()
     else: 
-        orders = CncOrder.query.count()
-        pending = CncOrder.query.filter(~CncOrder.status.in_(['已完成', '已驳回'])).count()
+        orders = CncOrder.query.filter(CncOrder.status != '已删除').count()
+        pending = CncOrder.query.filter(~CncOrder.status.in_(['已完成', '已驳回', '已删除'])).count()
 
     return jsonify({
         "total": Component.query.count(), "published": Component.query.filter_by(status='已发布').count(),
         "orders": orders, "templates": StandardTemplate.query.count(), "pending": pending
     })
+
 @app.route('/api/dictionaries', methods=['GET', 'POST', 'DELETE'])
 def handle_dictionaries():
     if request.method == 'GET':
@@ -191,7 +193,8 @@ def handle_dictionaries():
             db.session.commit()
             return jsonify({"status": "success", "message": "添加成功！"})
         except Exception as e:
-            return jsonify({"status": "error", "message": "添加失败，可能存在重复名称！"})
+            db.session.rollback()  # 👈 【核心修补】：发生冲突必须回滚，防止卡死
+            return jsonify({"status": "error", "message": f"添加失败！系统报错: {str(e)}"})
 
     if request.method == 'DELETE':
         dtype = request.args.get('type')
@@ -203,6 +206,7 @@ def handle_dictionaries():
         
         if obj: db.session.delete(obj); db.session.commit(); return jsonify({"status": "success"})
         return jsonify({"status": "error"})
+
 @app.route('/api/sidebar/pending', methods=['GET'])
 def sidebar_pending_orders():
     username, role = request.args.get('username'), request.args.get('role')
@@ -348,22 +352,16 @@ def handle_feedback():
         f = db.session.get(BugFeedback, request.json.get('id'))
         if f: f.status = '已解决'; db.session.commit(); return jsonify({"status": "success"})
         return jsonify({"status": "error"})
-
 @app.route('/api/utils/parse_excel', methods=['POST'])
 def parse_excel():
     if 'file' not in request.files: return jsonify({"status": "error", "message": "未接收到文件"})
     try:
         df = pd.read_excel(request.files['file'], engine='openpyxl')
         parsed_data = []
-        missing_parts = [] 
         
         for r in df.to_dict('records'):
             part_no = str(r.get('部件编号', str(r.get('型号', '')))).strip()
             if not part_no or part_no == 'nan': continue
-            
-            if not Component.query.filter_by(part_no=part_no).first():
-                missing_parts.append(part_no)
-                continue
             
             raw_qty = r.get('数量', 1)
             try: qty = int(raw_qty)
@@ -372,12 +370,23 @@ def parse_excel():
             is_b_str = str(r.get('基准必选', '否')).strip()
             is_baseline = is_b_str == '是' or is_b_str.lower() == 'true' or is_b_str == '1'
             
-            parsed_data.append({"part_no": part_no, "qty": qty, "is_baseline": is_baseline})
+            # 👇 【新增】：提取制造商和部件名称（处理 pandas 可能产生的 'nan'）
+            man = str(r.get('制造商', '')).strip()
+            if man == 'nan': man = ''
+            
+            name = str(r.get('部件名称', str(r.get('名称', '')))).strip()
+            if name == 'nan': name = ''
+            
+            # 将更多信息一并塞给前端
+            parsed_data.append({
+                "part_no": part_no, 
+                "qty": qty, 
+                "is_baseline": is_baseline,
+                "man": man,
+                "name": name
+            })
         
-        msg = f"✅ 成功解析并提取了 {len(parsed_data)} 条有效部件！"
-        if missing_parts:
-            msg += f"\n\n⚠️ 以下部件因【未入库】已被自动跳过：\n{', '.join(set(missing_parts))}"
-
+        msg = f"✅ 成功从 Excel 读取了 {len(parsed_data)} 行部件数据"
         return jsonify({"status": "success", "data": parsed_data, "message": msg})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
@@ -408,7 +417,7 @@ def upload_components():
     except Exception as e:
         return jsonify({"status": "error", "message": f"解析失败: {str(e)}"})
 
-@app.route('/api/components', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/components', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def handle_components():
     if request.method == 'GET':
         query = Component.query
@@ -418,7 +427,7 @@ def handle_components():
         if request.args.get('part_no'): query = query.filter(Component.part_no.like(f"%{request.args.get('part_no')}%"))
         
         comps = query.order_by(Component.created_at.desc()).all()
-        return jsonify([{"id": c.id, "manufacturer": c.manufacturer, "name": c.name, "part_no": c.part_no, "status": c.status} for c in comps])
+        return jsonify([{"id": c.id, "manufacturer": c.manufacturer, "name": c.name, "part_no": c.part_no, "status": c.status, "reject_reason": getattr(c, 'reject_reason', '')} for c in comps])
 
     if request.method == 'POST':
         part_no = request.json.get('part_no', '').strip()
@@ -432,7 +441,23 @@ def handle_components():
         ))
         db.session.commit()
         return jsonify({"status": "success", "message": "部件已提交申请"})
-
+    if request.method == 'PUT':
+        data = request.json
+        comp = db.session.get(Component, data.get('id'))
+        if not comp:
+            return jsonify({"status": "error", "message": "找不到该部件"})
+        
+        new_part_no = data.get('part_no', '').strip()
+        # 如果修改了编号，需要校验新编号是否跟库里其他部件冲突
+        if new_part_no != comp.part_no:
+            if Component.query.filter_by(part_no=new_part_no).first():
+                return jsonify({"status": "error", "message": "修改失败：新的部件编号在系统内已存在！"})
+        
+        comp.manufacturer = data.get('manufacturer', '').strip()
+        comp.name = data.get('name', '').strip()
+        comp.part_no = new_part_no
+        db.session.commit()
+        return jsonify({"status": "success", "message": "部件信息修改成功"})
     if request.method == 'DELETE':
         comp = db.session.get(Component, request.args.get('id'))
         if comp: db.session.delete(comp); db.session.commit(); return jsonify({"status": "success", "message": "部件已永久删除"})
@@ -454,7 +479,8 @@ def audit_component():
 @app.route('/api/templates', methods=['GET', 'POST', 'DELETE'])
 def handle_templates():
     if request.method == 'GET':
-        return jsonify([{"id": t.id, "no": t.template_no, "name": t.name, "applicable_machine": t.applicable_machine, "data": json.loads(t.components_json)} for t in StandardTemplate.query.order_by(StandardTemplate.created_at.desc()).all()])
+        # 👇 增加 .filter(StandardTemplate.status != '已删除')
+        return jsonify([{"id": t.id, "no": t.template_no, "name": t.name, "applicable_machine": t.applicable_machine, "data": json.loads(t.components_json)} for t in StandardTemplate.query.filter(StandardTemplate.status != '已删除').order_by(StandardTemplate.created_at.desc()).all()])
     
     if request.method == 'POST':
         req_id = request.json.get('id')
@@ -488,7 +514,10 @@ def handle_templates():
 
     if request.method == 'DELETE':
         tpl = db.session.get(StandardTemplate, request.args.get('id'))
-        if tpl: db.session.delete(tpl); db.session.commit()
+        if tpl: 
+            tpl.status = '已删除' # 👈 改为软删除
+            # db.session.delete(tpl) # 👈 注释或删掉这行物理删除代码
+            db.session.commit()
         return jsonify({"status": "success"})
 
 
@@ -533,15 +562,27 @@ def export_order(order_id):
 def handle_orders():
     if request.method == 'GET':
         u, r, search = request.args.get('username', ''), request.args.get('role', ''), request.args.get('search', '').strip()
-        query = CncOrder.query
         
-        # 【修改】标准管理员等同于超管权限，不设置filter，可看全部
-        if r == '研发工程师': query = query.filter_by(applicant=u)
-        elif r == '产品主管': query = query.filter_by(supervisor=u)
-        elif r == '团队负责人': query = query.filter_by(team_leader=u)
-        elif r == '产品线总师': query = query.filter_by(chief=u)
+        # 👇 核心过滤：默认不读取状态为“已删除”的任何订单
+        query = CncOrder.query.filter(CncOrder.status != '已删除')
+        
+        # 【修改】加入 db.or_ 逻辑：符合自己身份的可以看，或者状态是“已完成”的都可以看
+        if r == '超级管理员' or r == '标准管理员':
+            pass  # 超管和标管不设置过滤，可看除“已删除”外的全部
+        elif r == '研发工程师': 
+            query = query.filter(db.or_(CncOrder.applicant == u, CncOrder.status == '已完成'))
+        elif r == '产品主管': 
+            query = query.filter(db.or_(CncOrder.supervisor == u, CncOrder.status == '已完成'))
+        elif r == '团队负责人': 
+            query = query.filter(db.or_(CncOrder.team_leader == u, CncOrder.status == '已完成'))
+        elif r == '产品线总师': 
+            query = query.filter(db.or_(CncOrder.chief == u, CncOrder.status == '已完成'))
+        else:
+            query = query.filter(CncOrder.status == '已完成')
 
-        if search: query = query.filter(db.or_(CncOrder.order_no.like(f"%{search}%"), CncOrder.manufacturer.like(f"%{search}%"), CncOrder.applicable_machine.like(f"%{search}%")))
+        if search: 
+            query = query.filter(db.or_(CncOrder.order_no.like(f"%{search}%"), CncOrder.manufacturer.like(f"%{search}%"), CncOrder.applicable_machine.like(f"%{search}%")))
+            
         orders = query.order_by(CncOrder.created_at.desc()).all()
         return jsonify([{
             "id": o.id, "order_no": o.order_no, "manufacturer": o.manufacturer, "series": o.series,
@@ -592,19 +633,13 @@ def handle_orders():
                         db.session.commit()
                         return jsonify({"status": "success", "order_no": order.order_no})
                     else: # 新建单子完美匹配
-                        final_order_no = generate_business_no('EX', data.get('series', ''), req_machine)
-                        chief_u = User.query.filter_by(role='产品线总师', product_line=data.get('product_line', '通用')).first()
-                        db.session.add(CncOrder(
-                            order_no=final_order_no, manufacturer=data.get('manufacturer', '未知'), series=data.get('series', '-'),
-                            applicable_machine=req_machine, applicant=data.get('applicant', '未知'),
-                            supervisor=data.get('supervisor'), team_leader=data.get('team_leader'), chief=chief_u.username if chief_u else '未分配',
-                            status='已完成', components_json=json.dumps(input_comps), 
-                            matched_template=f"自动复用完全一致订单: {o.order_no}",
-                            match_score=1.0, match_adds='[]', match_rms='[]',
-                            approve_remark="系统侦测到完全一致的历史订单配置，已自动为您核准通过。"
-                        ))
-                        db.session.commit()
-                        return jsonify({"status": "success", "order_no": final_order_no})
+                        # 👇 核心修改：拦截创建新单，直接返回已存在的单号和复用标识
+                        return jsonify({
+                            "status": "success", 
+                            "reused": True,  # 前端通过这个标记来识别是否重用
+                            "existing_order_no": o.order_no,
+                            "message": f"♻️ 无需重复建单！\n系统检测到该配置与已完结的经典清单【{o.order_no}】完全一致，已直接为您复用该清单！"
+                        })
             except Exception:
                 continue
 
@@ -612,7 +647,7 @@ def handle_orders():
         best_tpl, max_score, min_diff_count = None, -1.0, 999999 
         best_adds, best_rms = [], []
 
-        for tpl in StandardTemplate.query.filter_by(applicable_machine=req_machine).all():
+        for tpl in StandardTemplate.query.filter_by(applicable_machine=req_machine).filter(StandardTemplate.status != '已删除').all():
             try: tpl_data = json.loads(tpl.components_json) 
             except Exception: continue
             if not isinstance(tpl_data, list): continue
@@ -668,6 +703,11 @@ def handle_orders():
             max_score = 0.0
             best_adds = []
             best_rms = []
+            if not data.get('force_submit'):
+                return jsonify({
+                    "status": "confirm",
+                    "message": "⚠️ 匹配警告：系统未找到任何相应的标准库基准！\n\n您提交的配置明细与现有标准差异过大（或该机床类型暂无可用基准）。\n如继续提交，该清单将进入【待定基准】状态，请联系流控所进行批准。\n\n您确定要作为新定制单继续提交吗？"
+                })
 
         chief_u = User.query.filter_by(role='产品线总师', product_line=data.get('product_line', '通用')).first()
         chief_name = chief_u.username if chief_u else '未分配'
@@ -705,7 +745,10 @@ def handle_orders():
 
     if request.method == 'DELETE':
         order = db.session.get(CncOrder, request.args.get('id'))
-        if order: db.session.delete(order); db.session.commit(); return jsonify({"status": "success"})
+        if order: 
+            order.status = '已删除'  # 👈 将物理删除改为软删除状态标识
+            db.session.commit()
+            return jsonify({"status": "success"})
         return jsonify({"status": "error"})
 
 
@@ -714,7 +757,7 @@ def init_database():
     if User.query.count() == 0:
         db.session.bulk_save_objects([
             # 【修改】把超管也变成标准管理员角色
-            User(username="admin", password="123456", role="标准管理员", product_line="全部"),
+            User(username="admin", password="123456", role="超级管理员", product_line="全部"),
             User(username="wang", password="1", role="标准管理员", product_line="通用"),
             User(username="chen", password="1", role="研发工程师", product_line="立铣"),
             User(username="li", password="1", role="研发工程师", product_line="立铣"),
